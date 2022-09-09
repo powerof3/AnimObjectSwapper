@@ -20,19 +20,21 @@ namespace AnimObjectSwap
 
 	bool Manager::LoadForms()
 	{
-		std::vector<std::string> configs;
+	    std::vector<std::string> configs;
+
+		constexpr auto suffix = "_ANIO"sv;
 
 		auto constexpr folder = R"(Data\)";
 		for (const auto& entry : std::filesystem::directory_iterator(folder)) {
 			if (entry.exists() && !entry.path().empty() && entry.path().extension() == ".ini"sv) {
-				if (const auto path = entry.path().string(); path.rfind("_ANIO") != std::string::npos) {
+				if (const auto path = entry.path().string(); path.rfind(suffix) != std::string::npos) {
 					configs.push_back(path);
 				}
 			}
 		}
 
 		if (configs.empty()) {
-			logger::warn("	No .ini files with _ANIO suffix were found within the Data folder, aborting...");
+			logger::warn("	No .ini files with {} suffix were found within the Data folder, aborting...", suffix);
 			return false;
 		}
 
