@@ -246,11 +246,6 @@ namespace AnimObjectSwap
 
 	RE::TESObjectANIO* Manager::GetSwappedAnimObject(const FormIDSet& a_animObjects) const
 	{
-		logger::info("**********");
-	    for (auto& id : a_animObjects) {
-			logger::info("{:X} : {}", id, RE::TESForm::LookupByID<RE::TESObjectANIO>(id)->GetFormEditorID());
-		}
-
 	    if (a_animObjects.size() == 1) {
 			return RE::TESForm::LookupByID<RE::TESObjectANIO>(*a_animObjects.begin());
 		} else {
