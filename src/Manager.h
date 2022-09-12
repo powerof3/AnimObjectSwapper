@@ -8,6 +8,7 @@ namespace AnimObjectSwap
 		template <class K, class D>
 		using Map = robin_hood::unordered_flat_map<K, D>;
 		using FormIDSet = robin_hood::unordered_flat_set<RE::FormID>;
+		using FormIDMap = Map<RE::FormID, FormIDSet>;
 
 		using FormIDStr = std::variant<RE::FormID, std::string>;
 		using FormIDStrVec = std::vector<FormIDStr>;
@@ -50,7 +51,7 @@ namespace AnimObjectSwap
 		bool PassFilter(RE::Actor* a_actor, const Conditions& a_conditions) const;
 		[[nodiscard]] RE::TESObjectANIO* GetSwappedAnimObject(const FormIDSet& a_animObject) const;
 
-		Map<RE::FormID, FormIDSet> _animObjects;
+		FormIDMap _animObjects;
 		Map<RE::FormID, std::vector<ConditionalSwap>> _animObjectsConditional;
 	};
 }

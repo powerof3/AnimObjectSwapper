@@ -91,30 +91,28 @@ namespace AnimObjectSwap
 				}
 
 				if (const auto values = ini.GetSection(section); values && !values->empty()) {
-					if (noConditions) {
-						logger::info("		{} animObject variations found", values->size());
-					} else {
-						logger::info("		{} conditional animObject variations found", values->size());
-					}
-
-					for (const auto& key : *values | std::views::keys) {
+				    for (const auto& key : *values | std::views::keys) {
 						auto splitValue = string::split(key.pItem, "|");
 
 						if (RE::FormID baseAnio = GetFormID(splitValue[0]); baseAnio != 0) {
-							auto swapAnioEntry = string::split(splitValue[1], ",");
+							FormIDSet tempSwapAnimObjects{};
+
+						    auto swapAnioEntry = string::split(splitValue[1], ",");
 							for (auto& swapAnioStr : swapAnioEntry) {
 								if (RE::FormID swapAnio = GetFormID(swapAnioStr); swapAnio != 0) {
 									if (noConditions) {
 										_animObjects[baseAnio].insert(swapAnio);
 									} else {
-										conditionalSwap.swappedAnimObjects.insert(swapAnio);
+										tempSwapAnimObjects.insert(swapAnio);
 									}
 								} else {
 									logger::error("				Unable to find swap animObject [{}] (invalid formID/editorID)", swapAnioStr);
 								}
 							}
+
 							if (!noConditions) {
-								_animObjectsConditional[baseAnio].push_back(conditionalSwap);
+								conditionalSwap.swappedAnimObjects = tempSwapAnimObjects;
+							    _animObjectsConditional[baseAnio].push_back(conditionalSwap);
 							}
 						} else {
 							logger::error("			Unable to find base animObject [{}] (invalid formID/editorID)", splitValue[0]);
@@ -224,7 +222,9 @@ namespace AnimObjectSwap
 
 	RE::TESObjectANIO* Manager::GetSwappedAnimObject(RE::TESObjectREFR* a_user, RE::TESObjectANIO* a_animObject)
 	{
-		if (const auto it = _animObjectsConditional.find(a_animObject->GetFormID()); it != _animObjectsConditional.end()) {
+		const auto origFormID = a_animObject->GetFormID();
+
+	    if (const auto it = _animObjectsConditional.find(origFormID); it != _animObjectsConditional.end()) {
 			if (const auto actor = a_user ? a_user->As<RE::Actor>() : nullptr; actor) {
 				if (const auto result = std::ranges::find_if(it->second, [&](const auto& conditionalSwap) {
 						return PassFilter(actor, conditionalSwap.conditions);
@@ -235,7 +235,7 @@ namespace AnimObjectSwap
 			}
 		}
 
-		if (const auto it = _animObjects.find(a_animObject->GetFormID()); it != _animObjects.end()) {
+		if (const auto it = _animObjects.find(origFormID); it != _animObjects.end()) {
 			if (const auto& swapANIO = it->second; !swapANIO.empty()) {
 				return GetSwappedAnimObject(swapANIO);
 			}
@@ -246,7 +246,12 @@ namespace AnimObjectSwap
 
 	RE::TESObjectANIO* Manager::GetSwappedAnimObject(const FormIDSet& a_animObjects) const
 	{
-		if (a_animObjects.size() == 1) {
+		logger::info("**********");
+	    for (auto& id : a_animObjects) {
+			logger::info("{:X} : {}", id, RE::TESForm::LookupByID<RE::TESObjectANIO>(id)->GetFormEditorID());
+		}
+
+	    if (a_animObjects.size() == 1) {
 			return RE::TESForm::LookupByID<RE::TESObjectANIO>(*a_animObjects.begin());
 		} else {
 			// return random element from set
