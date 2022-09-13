@@ -124,6 +124,16 @@ namespace AnimObjectSwap
 
 		logger::info("{:*^30}", "END");
 
+		logger::info("{} animobject swaps found", _animObjects.size());
+		for (auto& animObject : _animObjects) {
+			logger::info("	{} : {} variations", RE::TESForm::LookupByID(animObject.first)->GetFormEditorID(), animObject.second.size()); 
+		}
+
+		logger::info("{} conditional animobject swaps found", _animObjectsConditional.size());
+		for (auto& animObject : _animObjectsConditional) {
+			logger::info("	{} : {} conditional variations", RE::TESForm::LookupByID(animObject.first)->GetFormEditorID(), animObject.second.size());
+		}
+
 		return !_animObjects.empty() || !_animObjectsConditional.empty();
 	}
 
