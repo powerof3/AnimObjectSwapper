@@ -40,6 +40,7 @@ namespace AnimObjectSwap
 			FormIDStrVec ALL;
 			FormIDStrVec NOT;
 			FormIDStrVec MATCH;
+			FormIDStrVec ANY;
 		};
 
 		struct ConditionalSwap

@@ -74,18 +74,24 @@ namespace AnimObjectSwap
 				if (string::icontains(section, "|")) {
 					noConditions = false;
 
-					auto conditions = string::split(string::split(section, "|")[1], ",");  // [Forms|....]
+					auto conditions = string::split(string::split(section, "|")[1], ",");  // [ANIO|....]
 					for (auto& condition : conditions) {
 						if (condition.contains("+"sv)) {
 							auto conditions_ALL = string::split(condition, "+");
 							for (auto& condition_ALL : conditions_ALL) {
 								push_condition(condition_ALL, conditionalSwap.conditions.ALL);
 							}
-						} else if (condition.at(0) == '-') {
-							condition.erase(0, 1);
-							push_condition(condition, conditionalSwap.conditions.NOT);
 						} else {
-							push_condition(condition, conditionalSwap.conditions.MATCH);
+							auto id = condition.at(0);
+							if (id == '-') {
+								condition.erase(0, 1);
+								push_condition(condition, conditionalSwap.conditions.NOT);
+							} else if (id == '*') {
+								condition.erase(0, 1);
+								push_condition(condition, conditionalSwap.conditions.ANY);
+							} else {
+								push_condition(condition, conditionalSwap.conditions.MATCH);
+							}
 						}
 					}
 				}
@@ -224,6 +230,33 @@ namespace AnimObjectSwap
 			}
 		};
 
+		const auto contains_filters = [&](const FormIDStrVec& a_formIDStrVec) {
+			return std::ranges::any_of(a_formIDStrVec, [&](const FormIDStr& a_formIDStr) {
+				if (std::holds_alternative<std::string>(a_formIDStr)) {
+					const auto& string = std::get<std::string>(a_formIDStr);
+					if (string::icontains(string, ".nif") || string.contains('\\')) {
+						auto inventory = a_actor->GetInventory();
+						for (const auto& item : inventory | std::views::keys) {
+							if (const auto model = item->As<RE::TESModel>(); model && string::icontains(model->model, string)) {
+								return true;
+							}
+						}
+					} else {
+						if (const auto actorbase = a_actor->GetActorBase(); actorbase && actorbase->ContainsKeyword(string)) {
+							return true;
+						}
+						auto inventory = a_actor->GetInventory();
+						for (const auto& item : inventory | std::views::keys) {
+							if (const auto keywordForm = item->As<RE::BGSKeywordForm>(); keywordForm && keywordForm->ContainsKeywordString(string)) {
+								return true;
+							}
+						}
+					}
+				}
+				return false;
+			});
+		};
+
 		if (!a_conditions.ALL.empty() && !match_filters(a_conditions.ALL, true)) {
 			return false;
 		}
@@ -233,6 +266,10 @@ namespace AnimObjectSwap
 		}
 
 		if (!a_conditions.MATCH.empty() && !match_filters(a_conditions.MATCH)) {
+			return false;
+		}
+
+		if (!a_conditions.ANY.empty() && !contains_filters(a_conditions.ANY)) {
 			return false;
 		}
 
