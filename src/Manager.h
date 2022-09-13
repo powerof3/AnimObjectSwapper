@@ -33,9 +33,12 @@ namespace AnimObjectSwap
 		Manager& operator=(Manager&&) = delete;
 
 	private:
-		static RE::FormID GetFormID(const std::string& a_str);
+		using _GetFormEditorID = const char* (*)(std::uint32_t);
 
-	    struct Conditions
+		static RE::FormID GetFormID(const std::string& a_str);
+		static std::string GetEditorID(const RE::TESForm* a_form);
+
+		struct Conditions
 		{
 			FormIDStrVec ALL;
 			FormIDStrVec NOT;

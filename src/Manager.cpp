@@ -18,6 +18,15 @@ namespace AnimObjectSwap
 		return static_cast<RE::FormID>(0);
 	}
 
+	std::string Manager::GetEditorID(const RE::TESForm* a_form)
+	{
+		static auto tweaks = GetModuleHandle(L"po3_Tweaks");
+		if (auto function = reinterpret_cast<_GetFormEditorID>(GetProcAddress(tweaks, "GetFormEditorID"))) {
+			return function(a_form->GetFormID());
+		}
+		return std::string();
+	}
+
 	bool Manager::LoadForms()
 	{
 		std::vector<std::string> configs;
@@ -88,7 +97,7 @@ namespace AnimObjectSwap
 								push_condition(condition, conditionalSwap.conditions.NOT);
 							} else if (id == '*') {
 								condition.erase(0, 1);
-								push_condition(condition, conditionalSwap.conditions.ANY);
+								conditionalSwap.conditions.ANY.push_back(condition);
 							} else {
 								push_condition(condition, conditionalSwap.conditions.MATCH);
 							}
@@ -146,7 +155,7 @@ namespace AnimObjectSwap
 	bool Manager::PassFilter(RE::Actor* a_actor, const Conditions& a_conditions) const
 	{
 		const auto match_filter = [&](const FormIDStr& a_formIDStr) {
-			if (std::holds_alternative<RE::FormID>(a_formIDStr)) {
+		    if (std::holds_alternative<RE::FormID>(a_formIDStr)) {
 				if (auto form = RE::TESForm::LookupByID(std::get<RE::FormID>(a_formIDStr)); form) {
 					switch (form->GetFormType()) {
 					case RE::FormType::NPC:
@@ -185,7 +194,7 @@ namespace AnimObjectSwap
 						if (const auto boundObj = form->As<RE::TESBoundObject>(); boundObj && boundObj->IsInventoryObject()) {
 							auto inventory = a_actor->GetInventory();
 							for (const auto& item : inventory | std::views::keys) {
-								if (item == boundObj) {
+							    if (item == boundObj) {
 									return true;
 								}
 								if (const auto weapon = item->As<RE::TESObjectWEAP>(); weapon) {
@@ -213,7 +222,7 @@ namespace AnimObjectSwap
 					}
 					auto inventory = a_actor->GetInventory();
 					for (const auto& item : inventory | std::views::keys) {
-						if (const auto keywordForm = item->As<RE::BGSKeywordForm>(); keywordForm && keywordForm->HasKeywordString(string)) {
+					    if (const auto keywordForm = item->As<RE::BGSKeywordForm>(); keywordForm && keywordForm->HasKeywordString(string)) {
 							return true;
 						}
 					}
@@ -242,12 +251,20 @@ namespace AnimObjectSwap
 							}
 						}
 					} else {
-						if (const auto actorbase = a_actor->GetActorBase(); actorbase && actorbase->ContainsKeyword(string)) {
-							return true;
+						if (const auto actorbase = a_actor->GetActorBase(); actorbase) {
+							if (actorbase->ContainsKeyword(string)) {
+								return true;
+							}
+							if (const auto edid = GetEditorID(actorbase); string::icontains(edid, string)) {
+								return true;
+							}
 						}
 						auto inventory = a_actor->GetInventory();
 						for (const auto& item : inventory | std::views::keys) {
 							if (const auto keywordForm = item->As<RE::BGSKeywordForm>(); keywordForm && keywordForm->ContainsKeywordString(string)) {
+								return true;
+							}
+                            if (const auto edid = GetEditorID(item); string::icontains(edid, string)) {
 								return true;
 							}
 						}
