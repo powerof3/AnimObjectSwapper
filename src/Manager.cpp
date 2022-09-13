@@ -20,7 +20,7 @@ namespace AnimObjectSwap
 
 	bool Manager::LoadForms()
 	{
-	    std::vector<std::string> configs;
+		std::vector<std::string> configs;
 
 		constexpr auto suffix = "_ANIO"sv;
 
@@ -91,13 +91,13 @@ namespace AnimObjectSwap
 				}
 
 				if (const auto values = ini.GetSection(section); values && !values->empty()) {
-				    for (const auto& key : *values | std::views::keys) {
+					for (const auto& key : *values | std::views::keys) {
 						auto splitValue = string::split(key.pItem, "|");
 
 						if (RE::FormID baseAnio = GetFormID(splitValue[0]); baseAnio != 0) {
 							FormIDSet tempSwapAnimObjects{};
 
-						    auto swapAnioEntry = string::split(splitValue[1], ",");
+							auto swapAnioEntry = string::split(splitValue[1], ",");
 							for (auto& swapAnioStr : swapAnioEntry) {
 								if (RE::FormID swapAnio = GetFormID(swapAnioStr); swapAnio != 0) {
 									if (noConditions) {
@@ -112,7 +112,7 @@ namespace AnimObjectSwap
 
 							if (!noConditions) {
 								conditionalSwap.swappedAnimObjects = tempSwapAnimObjects;
-							    _animObjectsConditional[baseAnio].push_back(conditionalSwap);
+								_animObjectsConditional[baseAnio].push_back(conditionalSwap);
 							}
 						} else {
 							logger::error("			Unable to find base animObject [{}] (invalid formID/editorID)", splitValue[0]);
@@ -122,11 +122,11 @@ namespace AnimObjectSwap
 			}
 		}
 
-		logger::info("{:*^30}", "END");
+		logger::info("{:*^30}", "RESULT");
 
 		logger::info("{} animobject swaps found", _animObjects.size());
 		for (auto& animObject : _animObjects) {
-			logger::info("	{} : {} variations", RE::TESForm::LookupByID(animObject.first)->GetFormEditorID(), animObject.second.size()); 
+			logger::info("	{} : {} variations", RE::TESForm::LookupByID(animObject.first)->GetFormEditorID(), animObject.second.size());
 		}
 
 		logger::info("{} conditional animobject swaps found", _animObjectsConditional.size());
@@ -194,13 +194,22 @@ namespace AnimObjectSwap
 				}
 			} else {
 				const auto& string = std::get<std::string>(a_formIDStr);
-				if (a_actor->HasKeywordString(string)) {
-					return true;
-				}
-				auto inventory = a_actor->GetInventory();
-				for (const auto& item : inventory | std::views::keys) {
-					if (const auto keywordForm = item->As<RE::BGSKeywordForm>(); keywordForm && keywordForm->HasKeywordString(string)) {
+				if (string::icontains(string, ".nif") || string.contains('\\')) {
+					auto inventory = a_actor->GetInventory();
+					for (const auto& item : inventory | std::views::keys) {
+						if (const auto model = item->As<RE::TESModel>(); model && string::icontains(model->model, string)) {
+							return true;
+						}
+					}
+				} else {
+					if (a_actor->HasKeywordString(string)) {
 						return true;
+					}
+					auto inventory = a_actor->GetInventory();
+					for (const auto& item : inventory | std::views::keys) {
+						if (const auto keywordForm = item->As<RE::BGSKeywordForm>(); keywordForm && keywordForm->HasKeywordString(string)) {
+							return true;
+						}
 					}
 				}
 			}
@@ -234,7 +243,7 @@ namespace AnimObjectSwap
 	{
 		const auto origFormID = a_animObject->GetFormID();
 
-	    if (const auto it = _animObjectsConditional.find(origFormID); it != _animObjectsConditional.end()) {
+		if (const auto it = _animObjectsConditional.find(origFormID); it != _animObjectsConditional.end()) {
 			if (const auto actor = a_user ? a_user->As<RE::Actor>() : nullptr; actor) {
 				if (const auto result = std::ranges::find_if(it->second, [&](const auto& conditionalSwap) {
 						return PassFilter(actor, conditionalSwap.conditions);
@@ -256,7 +265,7 @@ namespace AnimObjectSwap
 
 	RE::TESObjectANIO* Manager::GetSwappedAnimObject(const FormIDSet& a_animObjects) const
 	{
-	    if (a_animObjects.size() == 1) {
+		if (a_animObjects.size() == 1) {
 			return RE::TESForm::LookupByID<RE::TESObjectANIO>(*a_animObjects.begin());
 		} else {
 			// return random element from set
