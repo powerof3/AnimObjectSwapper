@@ -1,4 +1,5 @@
 #include "Manager.h"
+#include "MergeMapperPluginAPI.h"
 
 namespace AnimObjectSwap
 {
@@ -8,8 +9,12 @@ namespace AnimObjectSwap
 			if (auto splitID = string::split(a_str, "~"); splitID.size() == 2) {
 				const auto formID = string::lexical_cast<RE::FormID>(splitID[0], true);
 				const auto& modName = splitID[1];
-
-				return RE::TESDataHandler::GetSingleton()->LookupFormID(formID, modName);
+				if (g_mergeMapperInterface) {
+					const auto [mergedModName, mergedFormID] = g_mergeMapperInterface->GetNewFormID(modName.c_str(), formID);
+					return RE::TESDataHandler::GetSingleton()->LookupFormID(mergedFormID, (const char*)mergedModName);
+				} else {
+					return RE::TESDataHandler::GetSingleton()->LookupFormID(formID, modName);
+				}
 			}
 		}
 		if (const auto form = RE::TESForm::LookupByEditorID(a_str); form) {

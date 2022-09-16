@@ -141,6 +141,7 @@ else ()
 endif()
 
 find_path(SIMPLEINI_INCLUDE_DIRS "ConvertUTF.c")
+find_path(MERGEMAPPER_INCLUDE_DIRS "MergeMapperPluginAPI.h")
 
 # ---- Add source files ----
 
@@ -172,6 +173,7 @@ add_library(
 	${CMAKE_CURRENT_BINARY_DIR}/include/Version.h
 	${CMAKE_CURRENT_BINARY_DIR}/version.rc
 	.clang-format
+	${MERGEMAPPER_INCLUDE_DIRS}/MergeMapperPluginAPI.cpp
 )
 
 target_compile_features(
@@ -192,6 +194,7 @@ target_include_directories(
 		${CMAKE_CURRENT_BINARY_DIR}/include
 		${CMAKE_CURRENT_SOURCE_DIR}/src
 		${SIMPLEINI_INCLUDE_DIRS}
+		${MERGEMAPPER_INCLUDE_DIRS}
 )
 
 target_link_libraries(
