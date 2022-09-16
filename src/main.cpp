@@ -1,4 +1,5 @@
 #include "Manager.h"
+#include "MergeMapperPluginAPI.h"
 #include "Hooks.h"
 
 void MessageHandler(SKSE::MessagingInterface::Message* a_message)
@@ -8,6 +9,17 @@ void MessageHandler(SKSE::MessagingInterface::Message* a_message)
 		{
 			logger::info("{:*^30}", "HOOKS");
 			AnimObjectSwap::Hooks::Install();
+		}
+		break;
+	case SKSE::MessagingInterface::kPostPostLoad:
+		{
+		logger::info("{:*^30}", "MERGES");
+		MergeMapperPluginAPI::GetMergeMapperInterface001();
+		if (g_mergeMapperInterface) {
+			const auto version = g_mergeMapperInterface->GetBuildNumber();
+			logger::info("Got MergeMapper interface buildnumber {}", version);
+		}else
+			logger::info("MergeMapper not detected");
 		}
 		break;
 	case SKSE::MessagingInterface::kDataLoaded:
@@ -42,7 +54,13 @@ extern "C" DLLEXPORT bool SKSEAPI SKSEPlugin_Query(const SKSE::QueryInterface* a
 	}
 
 	const auto ver = a_skse->RuntimeVersion();
-	if (ver < SKSE::RUNTIME_1_5_39) {
+	if (ver
+#	ifndef SKYRIMVR
+		< SKSE::RUNTIME_1_5_39
+#	else
+		> SKSE::RUNTIME_VR_1_4_15_1
+#	endif
+	) {
 		logger::critical(FMT_STRING("Unsupported runtime version {}"), ver.string());
 		return false;
 	}
