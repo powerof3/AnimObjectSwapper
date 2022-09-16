@@ -8,6 +8,7 @@ namespace AnimObjectSwap
 		template <class K, class D>
 		using Map = robin_hood::unordered_flat_map<K, D>;
 		using FormIDSet = robin_hood::unordered_flat_set<RE::FormID>;
+		using FormIDMap = Map<RE::FormID, FormIDSet>;
 
 		using FormIDStr = std::variant<RE::FormID, std::string>;
 		using FormIDStrVec = std::vector<FormIDStr>;
@@ -32,13 +33,17 @@ namespace AnimObjectSwap
 		Manager& operator=(Manager&&) = delete;
 
 	private:
-		static RE::FormID GetFormID(const std::string& a_str);
+		using _GetFormEditorID = const char* (*)(std::uint32_t);
 
-	    struct Conditions
+		static RE::FormID GetFormID(const std::string& a_str);
+		static std::string GetEditorID(const RE::TESForm* a_form);
+
+		struct Conditions
 		{
 			FormIDStrVec ALL;
 			FormIDStrVec NOT;
 			FormIDStrVec MATCH;
+			FormIDStrVec ANY;
 		};
 
 		struct ConditionalSwap
@@ -50,7 +55,7 @@ namespace AnimObjectSwap
 		bool PassFilter(RE::Actor* a_actor, const Conditions& a_conditions) const;
 		[[nodiscard]] RE::TESObjectANIO* GetSwappedAnimObject(const FormIDSet& a_animObject) const;
 
-		Map<RE::FormID, FormIDSet> _animObjects;
+		FormIDMap _animObjects;
 		Map<RE::FormID, std::vector<ConditionalSwap>> _animObjectsConditional;
 	};
 }
