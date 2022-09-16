@@ -113,14 +113,14 @@ namespace AnimObjectSwap
 										conditionalSwap.swappedAnimObjects.insert(swapAnio);
 									}
 								} else {
-									logger::error("				Unable to find swap animObject [{}] (invalid formID/editorID)", swapAnioStr);
+									logger::error("{}				Unable to find swap animObject [{}] (invalid formID/editorID)", path, swapAnioStr);
 								}
 							}
 							if (!noConditions) {
 								_animObjectsConditional[baseAnio].push_back(conditionalSwap);
 							}
 						} else {
-							logger::error("			Unable to find base animObject [{}] (invalid formID/editorID)", splitValue[0]);
+							logger::error("{}			Unable to find base animObject [{}] (invalid formID/editorID)", path, splitValue[0]);
 						}
 					}
 				}
