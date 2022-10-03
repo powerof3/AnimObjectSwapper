@@ -1,6 +1,6 @@
+#include "Hooks.h"
 #include "Manager.h"
 #include "MergeMapperPluginAPI.h"
-#include "Hooks.h"
 
 void MessageHandler(SKSE::MessagingInterface::Message* a_message)
 {
@@ -13,13 +13,14 @@ void MessageHandler(SKSE::MessagingInterface::Message* a_message)
 		break;
 	case SKSE::MessagingInterface::kPostPostLoad:
 		{
-		logger::info("{:*^30}", "MERGES");
-		MergeMapperPluginAPI::GetMergeMapperInterface001();
-		if (g_mergeMapperInterface) {
-			const auto version = g_mergeMapperInterface->GetBuildNumber();
-			logger::info("Got MergeMapper interface buildnumber {}", version);
-		}else
-			logger::info("MergeMapper not detected");
+			logger::info("{:*^30}", "MERGES");
+			MergeMapperPluginAPI::GetMergeMapperInterface001();
+			if (g_mergeMapperInterface) {
+				const auto version = g_mergeMapperInterface->GetBuildNumber();
+				logger::info("Got MergeMapper interface buildnumber {}", version);
+			} else {
+				logger::info("MergeMapper not detected");
+			}
 		}
 		break;
 	case SKSE::MessagingInterface::kDataLoaded:
@@ -94,7 +95,7 @@ extern "C" DLLEXPORT bool SKSEAPI SKSEPlugin_Load(const SKSE::LoadInterface* a_s
 {
 	InitializeLog();
 
-	logger::info("loaded");
+	logger::info("Game version : {}", a_skse->RuntimeVersion().string());
 
 	SKSE::Init(a_skse);
 
