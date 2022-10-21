@@ -1,4 +1,5 @@
 #include "Manager.h"
+#include "LookupFilters.h"
 #include "MergeMapperPluginAPI.h"
 
 namespace AnimObjectSwap
@@ -25,11 +26,45 @@ namespace AnimObjectSwap
 
 	std::string Manager::GetEditorID(const RE::TESForm* a_form)
 	{
-		static auto tweaks = GetModuleHandle(L"po3_Tweaks");
-		if (auto function = reinterpret_cast<_GetFormEditorID>(GetProcAddress(tweaks, "GetFormEditorID"))) {
-			return function(a_form->GetFormID());
+		switch (a_form->GetFormType()) {
+		case RE::FormType::Keyword:
+		case RE::FormType::LocationRefType:
+		case RE::FormType::Action:
+		case RE::FormType::MenuIcon:
+		case RE::FormType::Global:
+		case RE::FormType::HeadPart:
+		case RE::FormType::Race:
+		case RE::FormType::Sound:
+		case RE::FormType::Script:
+		case RE::FormType::Navigation:
+		case RE::FormType::Cell:
+		case RE::FormType::WorldSpace:
+		case RE::FormType::Land:
+		case RE::FormType::NavMesh:
+		case RE::FormType::Dialogue:
+		case RE::FormType::Quest:
+		case RE::FormType::Idle:
+		case RE::FormType::AnimatedObject:
+		case RE::FormType::ImageAdapter:
+		case RE::FormType::VoiceType:
+		case RE::FormType::Ragdoll:
+		case RE::FormType::DefaultObject:
+		case RE::FormType::MusicType:
+		case RE::FormType::StoryManagerBranchNode:
+		case RE::FormType::StoryManagerQuestNode:
+		case RE::FormType::StoryManagerEventNode:
+		case RE::FormType::SoundRecord:
+			return a_form->GetFormEditorID();
+		default:
+			{
+				static auto tweaks = GetModuleHandle(L"po3_Tweaks");
+				static auto func = reinterpret_cast<_GetFormEditorID>(GetProcAddress(tweaks, "GetFormEditorID"));
+				if (func) {
+					return func(a_form->formID);
+				}
+				return std::string();
+			}
 		}
-		return std::string();
 	}
 
 	bool Manager::LoadForms()
@@ -157,149 +192,6 @@ namespace AnimObjectSwap
 		return !_animObjects.empty() || !_animObjectsConditional.empty();
 	}
 
-	bool Manager::PassFilter(RE::Actor* a_actor, const Conditions& a_conditions) const
-	{
-		const auto match_filter = [&](const FormIDStr& a_formIDStr) {
-			if (std::holds_alternative<RE::FormID>(a_formIDStr)) {
-				if (auto form = RE::TESForm::LookupByID(std::get<RE::FormID>(a_formIDStr)); form) {
-					switch (form->GetFormType()) {
-					case RE::FormType::NPC:
-						return a_actor->GetActorBase() == form;
-					case RE::FormType::Faction:
-						{
-							const auto faction = form->As<RE::TESFaction>();
-							return a_actor->IsInFaction(faction);
-						}
-					case RE::FormType::Race:
-						{
-							const auto race = form->As<RE::TESRace>();
-							return a_actor->GetRace() == race;
-						}
-					case RE::FormType::Keyword:
-						{
-							if (const auto keyword = form->As<RE::BGSKeyword>(); keyword) {
-								if (a_actor->HasKeyword(keyword)) {
-									return true;
-								}
-								auto inventory = a_actor->GetInventory();
-								for (const auto& item : inventory | std::views::keys) {
-									if (const auto keywordForm = item->As<RE::BGSKeywordForm>(); keywordForm && keywordForm->HasKeyword(keyword)) {
-										return true;
-									}
-								}
-							}
-							return false;
-						}
-					case RE::FormType::Location:
-						{
-							const auto location = form->As<RE::BGSLocation>();
-							const auto currentLocation = a_actor->GetCurrentLocation();
-
-							return a_actor->GetCurrentLocation() == location || currentLocation && currentLocation->IsParent(location);
-						}
-					default:
-						if (const auto boundObj = form->As<RE::TESBoundObject>(); boundObj && boundObj->IsInventoryObject()) {
-							auto inventory = a_actor->GetInventory();
-							for (const auto& item : inventory | std::views::keys) {
-								if (item == boundObj) {
-									return true;
-								}
-								if (const auto weapon = item->As<RE::TESObjectWEAP>(); weapon) {
-									if (weapon->templateWeapon == boundObj) {
-										return true;
-									}
-								}
-							}
-						}
-						return false;
-					}
-				}
-			} else {
-				const auto& string = std::get<std::string>(a_formIDStr);
-				if (string::icontains(string, ".nif") || string.contains('\\')) {
-					auto inventory = a_actor->GetInventory();
-					for (const auto& item : inventory | std::views::keys) {
-						if (const auto model = item->As<RE::TESModel>(); model && string::icontains(model->model, string)) {
-							return true;
-						}
-					}
-				} else {
-					if (a_actor->HasKeywordString(string)) {
-						return true;
-					}
-					auto inventory = a_actor->GetInventory();
-					for (const auto& item : inventory | std::views::keys) {
-						if (const auto keywordForm = item->As<RE::BGSKeywordForm>(); keywordForm && keywordForm->HasKeywordString(string)) {
-							return true;
-						}
-					}
-				}
-			}
-			return false;
-		};
-
-		const auto match_filters = [&](const FormIDStrVec& a_formIDStrVec, bool a_matchAll = false) {
-			if (a_matchAll) {
-				return std::ranges::all_of(a_formIDStrVec, match_filter);
-			} else {
-				return std::ranges::any_of(a_formIDStrVec, match_filter);
-			}
-		};
-
-		const auto contains_filters = [&](const FormIDStrVec& a_formIDStrVec) {
-			return std::ranges::any_of(a_formIDStrVec, [&](const FormIDStr& a_formIDStr) {
-				if (std::holds_alternative<std::string>(a_formIDStr)) {
-					const auto& string = std::get<std::string>(a_formIDStr);
-					if (string::icontains(string, ".nif") || string.contains('\\')) {
-						auto inventory = a_actor->GetInventory();
-						for (const auto& item : inventory | std::views::keys) {
-							if (const auto model = item->As<RE::TESModel>(); model && string::icontains(model->model, string)) {
-								return true;
-							}
-						}
-					} else {
-						if (const auto actorbase = a_actor->GetActorBase(); actorbase) {
-							if (actorbase->ContainsKeyword(string)) {
-								return true;
-							}
-							if (const auto edid = GetEditorID(actorbase); string::icontains(edid, string)) {
-								return true;
-							}
-						}
-						auto inventory = a_actor->GetInventory();
-						for (const auto& item : inventory | std::views::keys) {
-							if (const auto keywordForm = item->As<RE::BGSKeywordForm>(); keywordForm && keywordForm->ContainsKeywordString(string)) {
-								return true;
-							}
-							if (const auto edid = GetEditorID(item); string::icontains(edid, string)) {
-								return true;
-							}
-						}
-					}
-				}
-				return false;
-			});
-		};
-
-		if (!a_conditions.ALL.empty() && !match_filters(a_conditions.ALL, true)) {
-			return false;
-		}
-
-		if (!a_conditions.NOT.empty() && match_filters(a_conditions.NOT)) {
-			return false;
-		}
-
-		if (!a_conditions.MATCH.empty() && !match_filters(a_conditions.MATCH)) {
-			return false;
-		}
-
-		if (!a_conditions.ANY.empty() && !contains_filters(a_conditions.ANY)) {
-			return false;
-		}
-
-		return true;
-	}
-
 	RE::TESObjectANIO* Manager::GetSwappedAnimObject(RE::TESObjectREFR* a_user, RE::TESObjectANIO* a_animObject)
 	{
 		const auto origFormID = a_animObject->GetFormID();
@@ -307,7 +199,7 @@ namespace AnimObjectSwap
 		if (const auto it = _animObjectsConditional.find(origFormID); it != _animObjectsConditional.end()) {
 			if (const auto actor = a_user ? a_user->As<RE::Actor>() : nullptr; actor) {
 				if (const auto result = std::ranges::find_if(it->second, [&](const auto& conditionalSwap) {
-						return PassFilter(actor, conditionalSwap.conditions);
+						return Filter::PassFilter(actor, conditionalSwap.conditions);
 					});
 					result != it->second.end()) {
 					return GetSwappedAnimObject(result->swappedAnimObjects);

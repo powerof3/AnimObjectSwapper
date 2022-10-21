@@ -2,26 +2,41 @@
 
 namespace AnimObjectSwap
 {
+	template <class K, class D>
+	using Map = robin_hood::unordered_flat_map<K, D>;
+	using FormIDSet = robin_hood::unordered_flat_set<RE::FormID>;
+	using FormIDMap = Map<RE::FormID, FormIDSet>;
+
+	using FormIDStr = std::variant<RE::FormID, std::string>;
+	using FormIDStrVec = std::vector<FormIDStr>;
+
+	struct Conditions
+	{
+		FormIDStrVec ALL;
+		FormIDStrVec NOT;
+		FormIDStrVec MATCH;
+		FormIDStrVec ANY;
+	};
+
+	struct ConditionalSwap
+	{
+		Conditions conditions;
+		FormIDSet swappedAnimObjects;
+	};
+
 	class Manager
 	{
 	public:
-		template <class K, class D>
-		using Map = robin_hood::unordered_flat_map<K, D>;
-		using FormIDSet = robin_hood::unordered_flat_set<RE::FormID>;
-		using FormIDMap = Map<RE::FormID, FormIDSet>;
-
-		using FormIDStr = std::variant<RE::FormID, std::string>;
-		using FormIDStrVec = std::vector<FormIDStr>;
-
 		[[nodiscard]] static Manager* GetSingleton()
 		{
 			static Manager singleton;
 			return std::addressof(singleton);
 		}
 
-		bool LoadForms();
+		static std::string GetEditorID(const RE::TESForm* a_form);
 
-		RE::TESObjectANIO* GetSwappedAnimObject(RE::TESObjectREFR* a_user, RE::TESObjectANIO* a_animObject);
+		bool LoadForms();
+	    RE::TESObjectANIO* GetSwappedAnimObject(RE::TESObjectREFR* a_user, RE::TESObjectANIO* a_animObject);
 
 	protected:
 		Manager() = default;
@@ -36,23 +51,7 @@ namespace AnimObjectSwap
 		using _GetFormEditorID = const char* (*)(std::uint32_t);
 
 		static RE::FormID GetFormID(const std::string& a_str);
-		static std::string GetEditorID(const RE::TESForm* a_form);
 
-		struct Conditions
-		{
-			FormIDStrVec ALL;
-			FormIDStrVec NOT;
-			FormIDStrVec MATCH;
-			FormIDStrVec ANY;
-		};
-
-		struct ConditionalSwap
-		{
-			Conditions conditions;
-			FormIDSet swappedAnimObjects;
-		};
-
-		bool PassFilter(RE::Actor* a_actor, const Conditions& a_conditions) const;
 		[[nodiscard]] RE::TESObjectANIO* GetSwappedAnimObject(const FormIDSet& a_animObject) const;
 
 		FormIDMap _animObjects;

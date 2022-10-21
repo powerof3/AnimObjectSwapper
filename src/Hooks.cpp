@@ -24,6 +24,7 @@ namespace AnimObjectSwap::Hooks
 	{
 		REL::Relocation<std::uintptr_t> target{ RELOCATION_ID(42420, 43576), OFFSET(0x22A, 0x21F) };  //AnimationObjects::Load
 		stl::write_thunk_call<LoadAndAttachAddon>(target.address());
-		logger::info("Installed LoadAndAttachAddon hook"sv);
+
+	    logger::info("Installed LoadAndAttachAddon hook"sv);
 	}
 }
