@@ -160,7 +160,7 @@ namespace AnimObjectSwap
 	bool Manager::PassFilter(RE::Actor* a_actor, const Conditions& a_conditions) const
 	{
 		const auto match_filter = [&](const FormIDStr& a_formIDStr) {
-		    if (std::holds_alternative<RE::FormID>(a_formIDStr)) {
+			if (std::holds_alternative<RE::FormID>(a_formIDStr)) {
 				if (auto form = RE::TESForm::LookupByID(std::get<RE::FormID>(a_formIDStr)); form) {
 					switch (form->GetFormType()) {
 					case RE::FormType::NPC:
@@ -193,13 +193,15 @@ namespace AnimObjectSwap
 					case RE::FormType::Location:
 						{
 							const auto location = form->As<RE::BGSLocation>();
-							return a_actor->GetCurrentLocation() == location;
+							const auto currentLocation = a_actor->GetCurrentLocation();
+
+							return a_actor->GetCurrentLocation() == location || currentLocation && currentLocation->IsParent(location);
 						}
 					default:
 						if (const auto boundObj = form->As<RE::TESBoundObject>(); boundObj && boundObj->IsInventoryObject()) {
 							auto inventory = a_actor->GetInventory();
 							for (const auto& item : inventory | std::views::keys) {
-							    if (item == boundObj) {
+								if (item == boundObj) {
 									return true;
 								}
 								if (const auto weapon = item->As<RE::TESObjectWEAP>(); weapon) {
@@ -227,7 +229,7 @@ namespace AnimObjectSwap
 					}
 					auto inventory = a_actor->GetInventory();
 					for (const auto& item : inventory | std::views::keys) {
-					    if (const auto keywordForm = item->As<RE::BGSKeywordForm>(); keywordForm && keywordForm->HasKeywordString(string)) {
+						if (const auto keywordForm = item->As<RE::BGSKeywordForm>(); keywordForm && keywordForm->HasKeywordString(string)) {
 							return true;
 						}
 					}
@@ -269,7 +271,7 @@ namespace AnimObjectSwap
 							if (const auto keywordForm = item->As<RE::BGSKeywordForm>(); keywordForm && keywordForm->ContainsKeywordString(string)) {
 								return true;
 							}
-                            if (const auto edid = GetEditorID(item); string::icontains(edid, string)) {
+							if (const auto edid = GetEditorID(item); string::icontains(edid, string)) {
 								return true;
 							}
 						}
