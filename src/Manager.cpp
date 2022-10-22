@@ -135,7 +135,7 @@ namespace AnimObjectSwap
 					auto size = conditions.size();
 
 					if (size > 1) {
-						auto filters = split_sub_string(conditions[1], ",");
+						auto filters = split_sub_string(conditions[1]);
 						for (auto& filter : filters) {
 							if (filter.contains("+"sv)) {
 								auto filters_ALL = string::split(filter, "+");
@@ -158,15 +158,17 @@ namespace AnimObjectSwap
 					}
 
 					if (size > 2) {
-						const auto& traits = conditions[2];
-						if (traits == "M" || traits == "-F") {
-							conditionalSwap.conditions.traits.sex = RE::SEX::kMale;
-						} else if (traits == "F" || traits == "-M") {
-							conditionalSwap.conditions.traits.sex = RE::SEX::kFemale;
-						} else if (traits == "C") {
-							conditionalSwap.conditions.traits.child = true;
-						} else if (traits == "-C") {
-							conditionalSwap.conditions.traits.child = false;
+						const auto& traits = split_sub_string(conditions[2]);
+						for (auto& trait : traits) {
+							if (trait == "M" || trait == "-F") {
+								conditionalSwap.conditions.traits.sex = RE::SEX::kMale;
+							} else if (trait == "F" || trait == "-M") {
+								conditionalSwap.conditions.traits.sex = RE::SEX::kFemale;
+							} else if (trait == "C") {
+								conditionalSwap.conditions.traits.child = true;
+							} else if (trait == "-C") {
+								conditionalSwap.conditions.traits.child = false;
+							}
 						}
 					}
 				}
