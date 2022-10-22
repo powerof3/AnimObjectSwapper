@@ -112,35 +112,61 @@ namespace AnimObjectSwap
 				bool noConditions = true;
 				ConditionalSwap conditionalSwap{};
 
-				constexpr auto push_condition = [](const std::string& a_condition, FormIDStrVec& a_processedConditions) {
+				constexpr auto push_filter = [](const std::string& a_condition, FormIDStrVec& a_processedFilters) {
 					if (const auto processedID = GetFormID(a_condition); processedID != 0) {
-						a_processedConditions.push_back(processedID);
+						a_processedFilters.push_back(processedID);
 					} else {
-						a_processedConditions.push_back(a_condition);
+						logger::error("		Filter  [{}] INFO - unable to find form, treating filter as string", a_condition);
+						a_processedFilters.push_back(a_condition);
 					}
+				};
+
+				constexpr auto split_sub_string = [](const std::string& a_str, const std::string& a_delimiter = ",") {
+					if (!a_str.empty() && !string::icontains(a_str, "NONE"sv)) {
+						return string::split(a_str, a_delimiter);
+					}
+					return std::vector<std::string>();
 				};
 
 				if (string::icontains(section, "|")) {
 					noConditions = false;
 
-					auto conditions = string::split(string::split(section, "|")[1], ",");  // [ANIO|....]
-					for (auto& condition : conditions) {
-						if (condition.contains("+"sv)) {
-							auto conditions_ALL = string::split(condition, "+");
-							for (auto& condition_ALL : conditions_ALL) {
-								push_condition(condition_ALL, conditionalSwap.conditions.ALL);
-							}
-						} else {
-							auto id = condition.at(0);
-							if (id == '-') {
-								condition.erase(0, 1);
-								push_condition(condition, conditionalSwap.conditions.NOT);
-							} else if (id == '*') {
-								condition.erase(0, 1);
-								conditionalSwap.conditions.ANY.push_back(condition);
+					auto conditions = string::split(section, "|");  // [ANIO|FILTERS|TRAITS]
+					auto size = conditions.size();
+
+					if (size > 1) {
+						auto filters = split_sub_string(conditions[1], ",");
+						for (auto& filter : filters) {
+							if (filter.contains("+"sv)) {
+								auto filters_ALL = string::split(filter, "+");
+								for (auto& filter_ALL : filters_ALL) {
+									push_filter(filter_ALL, conditionalSwap.conditions.ALL);
+								}
 							} else {
-								push_condition(condition, conditionalSwap.conditions.MATCH);
+								auto id = filter.at(0);
+								if (id == '-') {
+									filter.erase(0, 1);
+									push_filter(filter, conditionalSwap.conditions.NOT);
+								} else if (id == '*') {
+									filter.erase(0, 1);
+									conditionalSwap.conditions.ANY.push_back(filter);  // string
+								} else {
+									push_filter(filter, conditionalSwap.conditions.MATCH);
+								}
 							}
+						}
+					}
+
+					if (size > 2) {
+						const auto& traits = conditions[2];
+						if (traits == "M" || traits == "-F") {
+							conditionalSwap.conditions.traits.sex = RE::SEX::kMale;
+						} else if (traits == "F" || traits == "-M") {
+							conditionalSwap.conditions.traits.sex = RE::SEX::kFemale;
+						} else if (traits == "C") {
+							conditionalSwap.conditions.traits.child = true;
+						} else if (traits == "-C") {
+							conditionalSwap.conditions.traits.child = false;
 						}
 					}
 				}
@@ -161,7 +187,7 @@ namespace AnimObjectSwap
 										tempSwapAnimObjects.insert(swapAnio);
 									}
 								} else {
-									logger::error("{}				Unable to find swap animObject [{}] (invalid formID/editorID)", path, swapAnioStr);
+									logger::error("			Swap ANIO [{}] FAIL (invalid formID/editorID)", swapAnioStr);
 								}
 							}
 
@@ -170,7 +196,7 @@ namespace AnimObjectSwap
 								_animObjectsConditional[baseAnio].push_back(conditionalSwap);
 							}
 						} else {
-							logger::error("{}			Unable to find base animObject [{}] (invalid formID/editorID)", path, splitValue[0]);
+							logger::error("			Base ANIO [{}] FAIL (invalid formID/editorID)", splitValue[0]);
 						}
 					}
 				}

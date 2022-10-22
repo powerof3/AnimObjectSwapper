@@ -17,7 +17,7 @@ jobs:
       CMAKE_VR_CONFIG_PRESET: ''
       CMAKE_VR_BUILD_PRESET: ''
       FOMOD_INCLUDE_PDB: true
-      FOMOD_MOD_NAME: "Anim Object Swapper"
+      FOMOD_MOD_NAME: "AnimObject Swapper"
       FOMOD_MOD_AUTHOR: "powerofthree"
       FOMOD_MOD_NEXUS_ID: "75167"
       FOMOD_SE_MIN_GAME_VERSION: '1.5'
