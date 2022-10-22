@@ -170,6 +170,19 @@ namespace AnimObjectSwap::Filter
 			return false;
 		}
 
+		const auto& traits = a_conditions.traits;
+
+		if (traits.sex != RE::SEX::kNone) {
+            const auto actorbase = a_actor->GetActorBase();
+		    if (actorbase && actorbase->GetSex() != traits.sex) {
+				return false;
+			}
+		}
+
+		if (traits.child && a_actor->IsChild() != *traits.child) {
+			return false;
+		}
+
 		return true;
 	}
 }

@@ -24,7 +24,10 @@ void MessageHandler(SKSE::MessagingInterface::Message* a_message)
 		}
 		break;
 	case SKSE::MessagingInterface::kDataLoaded:
-		AnimObjectSwap::Manager::GetSingleton()->LoadForms();
+		{
+			logger::info("{:*^30}", "INI");
+			AnimObjectSwap::Manager::GetSingleton()->LoadForms();
+		}
 		break;
 	default:
 		break;
@@ -86,7 +89,7 @@ void InitializeLog()
 	log->flush_on(spdlog::level::info);
 
 	spdlog::set_default_logger(std::move(log));
-	spdlog::set_pattern("[%l] %v"s);
+	spdlog::set_pattern("[%H:%M:%S:%e] %v"s);
 
 	logger::info(FMT_STRING("{} v{}"), Version::PROJECT, Version::NAME);
 }

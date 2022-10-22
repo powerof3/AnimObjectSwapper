@@ -10,18 +10,26 @@ namespace AnimObjectSwap
 	using FormIDStr = std::variant<RE::FormID, std::string>;
 	using FormIDStrVec = std::vector<FormIDStr>;
 
+	struct Traits
+	{
+		RE::SEX sex{ RE::SEX::kNone };
+		std::optional<bool> child{ std::nullopt };
+	};
+
 	struct Conditions
 	{
-		FormIDStrVec ALL;
-		FormIDStrVec NOT;
-		FormIDStrVec MATCH;
-		FormIDStrVec ANY;
+		FormIDStrVec ALL{};
+		FormIDStrVec NOT{};
+		FormIDStrVec MATCH{};
+		FormIDStrVec ANY{};
+
+		Traits traits{};
 	};
 
 	struct ConditionalSwap
 	{
-		Conditions conditions;
-		FormIDSet swappedAnimObjects;
+		Conditions conditions{};
+		FormIDSet swappedAnimObjects{};
 	};
 
 	class Manager
@@ -36,7 +44,7 @@ namespace AnimObjectSwap
 		static std::string GetEditorID(const RE::TESForm* a_form);
 
 		bool LoadForms();
-	    RE::TESObjectANIO* GetSwappedAnimObject(RE::TESObjectREFR* a_user, RE::TESObjectANIO* a_animObject);
+		RE::TESObjectANIO* GetSwappedAnimObject(RE::TESObjectREFR* a_user, RE::TESObjectANIO* a_animObject);
 
 	protected:
 		Manager() = default;
