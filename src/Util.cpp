@@ -53,9 +53,11 @@ namespace util
 					REX::ERROR("\t\t\tfailed to process {} (SWAP formID not found or not an AnimObject)", IDStr);
 				}
 			}
-			std::ranges::sort(set);
-			const auto dupes = std::ranges::unique(set);
-			set.erase(dupes.begin(), dupes.end());
+			if (!set.empty()) {
+				std::ranges::sort(set);
+				const auto dupes = std::ranges::unique(set);
+				set.erase(dupes.begin(), dupes.end());
+			}
 			return set;
 		} else {
 			return GetANIOFormID(a_str);
