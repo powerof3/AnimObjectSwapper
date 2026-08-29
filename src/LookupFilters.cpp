@@ -49,8 +49,8 @@ namespace AnimObjectSwap::Filter
 				bool result = false;
 
 				const auto list = a_form->As<RE::BGSListForm>();
-				list->ForEachForm([&](RE::TESForm& a_formInList) {
-					if (result = match_form_filter(a_actor, &a_formInList); result) {
+				list->ForEachForm([&](RE::TESForm* a_formInList) {
+					if (result = match_form_filter(a_actor, a_formInList); result) {
 						return RE::BSContainer::ForEachResult::kStop;
 					}
 					return RE::BSContainer::ForEachResult::kContinue;
@@ -65,7 +65,7 @@ namespace AnimObjectSwap::Filter
 					if (inv.first == boundObj) {
 						return true;
 					} else {
-						const auto weapon = inv.first->As<RE::TESObjectWEAP>();
+						const auto weapon = inv.first->template As<RE::TESObjectWEAP>();
 						return weapon && weapon->templateWeapon == boundObj;
 					}
 				});
@@ -83,22 +83,22 @@ namespace AnimObjectSwap::Filter
 				}
 			} else {
 				const auto& string = std::get<std::string>(a_formIDStr);
-				if (string::icontains(string, ".nif") || string.contains('\\')) {
+				if (REX::STR::ICONTAINS(string, ".nif") || string.contains('\\')) {
 					const auto inventory = a_actor->GetInventory();
 					return std::ranges::any_of(inventory, [&](const auto& inv) {
-						const auto model = inv.first->As<RE::TESModel>();
-						return model && string::icontains(model->model, string);
+						const auto model = inv.first->template As<RE::TESModel>();
+						return model && REX::STR::ICONTAINS(model->model, string);
 					});
 				} else {
 					if (a_actor->HasKeywordString(string)) {
 						return true;
 					}
-					if (auto cell = a_actor->GetParentCell(); cell && Manager::GetEditorID(cell) == string) {
+					if (auto cell = a_actor->GetParentCell(); cell && edid::get_editorID(cell) == string) {
 						return true;
 					}
 					const auto inventory = a_actor->GetInventory();
 					return std::ranges::any_of(inventory, [&](const auto& inv) {
-						const auto keywordForm = inv.first->As<RE::BGSKeywordForm>();
+						const auto keywordForm = inv.first->template As<RE::BGSKeywordForm>();
 						return keywordForm && keywordForm->HasKeywordString(string);
 					});
 				}
@@ -118,32 +118,32 @@ namespace AnimObjectSwap::Filter
 		return std::ranges::any_of(a_formIDStrVec, [&](const FormIDStr& a_formIDStr) {
 			if (std::holds_alternative<std::string>(a_formIDStr)) {
 				const auto& string = std::get<std::string>(a_formIDStr);
-				if (string::icontains(string, ".nif") || string.contains('\\')) {
+				if (REX::STR::ICONTAINS(string, ".nif") || string.contains('\\')) {
 					const auto inventory = a_actor->GetInventory();
 					return std::ranges::any_of(inventory, [&](const auto& inv) {
-						const auto model = inv.first->As<RE::TESModel>();
-						return model && string::icontains(model->model, string);
+						const auto model = inv.first->template As<RE::TESModel>();
+						return model && REX::STR::ICONTAINS(model->model, string);
 					});
 				} else {
 					if (const auto actorbase = a_actor->GetActorBase(); actorbase) {
 						if (actorbase->ContainsKeyword(string)) {
 							return true;
 						}
-						if (const auto edid = Manager::GetEditorID(actorbase); string::icontains(edid, string)) {
+						if (const auto edid = edid::get_editorID(actorbase); REX::STR::ICONTAINS(edid, string)) {
 							return true;
 						}
 					}
-					if (auto cell = a_actor->GetParentCell(); cell && string::icontains(Manager::GetEditorID(cell), string)) {
+					if (auto cell = a_actor->GetParentCell(); cell && REX::STR::ICONTAINS(edid::get_editorID(cell), string)) {
 						return true;
 					}
 					const auto inventory = a_actor->GetInventory();
 					return std::ranges::any_of(inventory, [&](const auto& inv) {
-						const auto keywordForm = inv.first->As<RE::BGSKeywordForm>();
+						const auto keywordForm = inv.first->template As<RE::BGSKeywordForm>();
 						if (keywordForm && keywordForm->ContainsKeywordString(string)) {
 							return true;
 						} else {
-							const auto edid = Manager::GetEditorID(inv.first);
-							return string::icontains(edid, string);
+							const auto edid = edid::get_editorID(inv.first);
+							return REX::STR::ICONTAINS(edid, string);
 						}
 					});
 				}

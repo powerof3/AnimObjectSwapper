@@ -9,7 +9,7 @@ namespace AnimObjectSwap::Hooks
 		{
 			RE::TESModel* model = a_model;
 
-			if (const auto animObject = stl::adjust_pointer<RE::TESObjectANIO>(a_model->GetAsModelTextureSwap(), -0x20); animObject) {
+			if (const auto animObject = REX::ADJUST_POINTER<RE::TESObjectANIO>(a_model->GetAsModelTextureSwap(), -0x20); animObject) {
 				if (const auto swappedAnimObject = Manager::GetSingleton()->GetSwappedAnimObject(a_actor, animObject)) {
 					model = swappedAnimObject;
 				}
@@ -25,6 +25,6 @@ namespace AnimObjectSwap::Hooks
 		REL::Relocation<std::uintptr_t> target{ RELOCATION_ID(42420, 43576), OFFSET(0x22A, 0x21F) };  //AnimationObjects::Load
 		stl::write_thunk_call<LoadAndAttachAddon>(target.address());
 
-	    logger::info("Installed LoadAndAttachAddon hook"sv);
+	    REX::INFO("Installed LoadAndAttachAddon hook"sv);
 	}
 }
