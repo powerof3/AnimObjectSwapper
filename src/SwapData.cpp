@@ -11,17 +11,22 @@ namespace AnimObjectSwap
 
 	RE::TESObjectANIO* SwapAnioData::GetSwapAnio(const RE::Actor* a_actor, RE::TESObjectANIO* a_animObject) const
 	{
+		RE::TESObjectANIO* anio = nullptr;
+		
 		if (!chance.PassedChance(a_actor, a_animObject)) {
-			return nullptr;
+			return anio;
 		}
 
 		if (const auto formID = std::get_if<RE::FormID>(&formIDSet); formID) {
-			return RE::TESForm::LookupByID<RE::TESObjectANIO>(*formID);
-		} else {  // return random element from set
-			auto& set = std::get<FormIDSet>(formIDSet);
-			const auto randIt = AOS_RNG(chance, a_actor, a_animObject).generate<std::size_t>(0, set.size() - 1);
-			return RE::TESForm::LookupByID<RE::TESObjectANIO>(set[randIt]);
+			anio = RE::TESForm::LookupByID<RE::TESObjectANIO>(*formID);
+		} else {
+			if (auto& set = std::get<FormIDSet>(formIDSet); !set.empty()) {  // return random element from set
+				const auto randIt = AOS_RNG(chance, a_actor, a_animObject).generate<std::size_t>(0, set.size() - 1);
+				anio = RE::TESForm::LookupByID<RE::TESObjectANIO>(set[randIt]);
+			}
 		}
+
+		return anio;
 	}
 
 	void SwapAnioData::GetForms(const std::string& a_path, const std::string& a_str, std::function<void(RE::FormID, SwapAnioData&)> a_func)
