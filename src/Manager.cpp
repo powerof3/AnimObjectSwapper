@@ -50,7 +50,7 @@ namespace AnimObjectSwap
 					REX::INFO("\treading [{}] : {} conditions", splitSection[0], conditions.size());
 
 					ConditionFilters processedConditions(
-						path.substr(4) + "|" + splitSection[1] + (splitSection.size() > 2 ? "|" + splitSection[2] : ""),
+						path.substr(5) + "|" + splitSection[1] + (splitSection.size() > 2 ? "|" + splitSection[2] : ""),
 						conditions,
 						splitSection.size() > 2 ? splitSection[2] : std::string{});
 

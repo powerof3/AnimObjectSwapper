@@ -48,7 +48,7 @@ namespace AnimObjectSwap
 			return;
 		}
 
-		if (const auto baseFormID = util::GetFormID(formPair[0]); baseFormID != 0) {
+		if (const auto baseFormID = util::GetANIOFormID(formPair[0]); baseFormID != 0) {
 			if (const auto swapFormID = util::GetSwapFormID(formPair[1]); !swap_empty(swapFormID)) {
 				if (base_same_as_swap(baseFormID, swapFormID)) {
 					REX::ERROR("\t\t\t\tfail : [{}] (BASE formID == SWAP formID)", a_str);
@@ -63,10 +63,10 @@ namespace AnimObjectSwap
 
 				a_func(baseFormID, swapAnioData);
 			} else {
-				REX::ERROR("\t\t\t\tfail : [{}] (SWAP formID not found)", a_str);
+				REX::ERROR("\t\t\t\tfail : [{}] (SWAP formID not found or not an AnimObject)", a_str);
 			}
 		} else {
-			REX::ERROR("\t\t\t\tfail : [{}] (BASE formID not found)", a_str);
+			REX::ERROR("\t\t\t\tfail : [{}] (BASE formID not found or not an AnimObject)", a_str);
 		}
 	}
 }

@@ -53,7 +53,9 @@ namespace AnimObjectSwap
 			currentLocation(a_actor->GetCurrentLocation()),
 			inventory(a_actor->GetInventory())
 		{
-			actorbaseEDID = editorID::get_editorID(actorbase);
+			if (actorbase) {
+				actorbaseEDID = editorID::get_editorID(actorbase);
+			}
 		}
 
 		[[nodiscard]] bool IsValid(RE::TESForm* a_form) const;

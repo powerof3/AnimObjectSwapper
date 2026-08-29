@@ -200,8 +200,12 @@ namespace AnimObjectSwap
 	bool ConditionalInput::IsAnyValid(const std::string& a_string) const
 	{
 		if (REX::STR::ICONTAINS(a_string, ".nif") || a_string.contains('\\')) {
-			return std::ranges::any_of(inventory | std::views::keys, [&](const auto& item) {
-				const auto model = item->template As<RE::TESModel>();
+			return std::ranges::any_of(inventory, [&](const auto& inv) {
+				const auto& [count, entryData] = inv.second;
+				if (count < 0) {
+					return false;
+				}
+				const auto model = inv.first->template As<RE::TESModel>();
 				return model && REX::STR::ICONTAINS(model->model, a_string);
 			});
 		}
@@ -213,11 +217,15 @@ namespace AnimObjectSwap
 		if (currentCell && REX::STR::ICONTAINS(currentCell->GetFormEditorID(), a_string)) {
 			return true;
 		}
-		return std::ranges::any_of(inventory | std::views::keys, [&](const auto& item) {
-			if (const auto keywordForm = item->template As<RE::BGSKeywordForm>(); keywordForm && keywordForm->ContainsKeywordString(a_string)) {
+		return std::ranges::any_of(inventory, [&](const auto& inv) {
+			const auto& [count, entryData] = inv.second;
+			if (count < 0) {
+				return false;
+			}
+			if (const auto keywordForm = inv.first->template As<RE::BGSKeywordForm>(); keywordForm && keywordForm->ContainsKeywordString(a_string)) {
 				return true;
 			}
-			return REX::STR::ICONTAINS(editorID::get_editorID(item), a_string);
+			return REX::STR::ICONTAINS(editorID::get_editorID(inv.first), a_string);
 		});
 	}
 

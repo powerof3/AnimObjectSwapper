@@ -23,7 +23,14 @@ AOS_RNG::AOS_RNG(const Chance& a_chance, const RE::Actor* a_actor) :
 {
 	switch (type) {
 	case CHANCE_TYPE::kActorHash:
-		seed = get_form_seed(a_actor);
+		{
+			if (a_actor) {
+				seed = get_form_seed(a_actor);
+			} else {
+				type = CHANCE_TYPE::kRandom;
+				seed = a_chance.seed;
+			}
+		}
 		break;
 	case CHANCE_TYPE::kRandom:
 		seed = a_chance.seed;

@@ -34,6 +34,12 @@ namespace util
 		return GetFormWithID(a_str, false).first;
 	}
 
+	RE::FormID GetANIOFormID(const std::string& a_str)
+	{
+		const auto& [formID, form] = GetFormWithID(a_str, true);
+		return form && form->Is(RE::FormType::AnimatedObject) ? formID : static_cast<RE::FormID>(0);
+	}
+
 	FormIDOrSet GetSwapFormID(const std::string& a_str)
 	{
 		if (a_str.contains(",")) {
@@ -41,10 +47,10 @@ namespace util
 			const auto IDStrs = REX::STR::SPLIT(a_str, ",");
 			set.reserve(IDStrs.size());
 			for (auto& IDStr : IDStrs) {
-				if (auto formID = GetFormID(IDStr); formID != 0) {
+				if (auto formID = GetANIOFormID(IDStr); formID != 0) {
 					set.emplace_back(formID);
 				} else {
-					REX::ERROR("\t\t\tfailed to process {} (SWAP formID not found)", IDStr);
+					REX::ERROR("\t\t\tfailed to process {} (SWAP formID not found or not an AnimObject)", IDStr);
 				}
 			}
 			std::ranges::sort(set);
@@ -52,7 +58,7 @@ namespace util
 			set.erase(dupes.begin(), dupes.end());
 			return set;
 		} else {
-			return GetFormID(a_str);
+			return GetANIOFormID(a_str);
 		}
 	}
 }

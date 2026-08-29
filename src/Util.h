@@ -9,6 +9,7 @@ namespace util
 {
 	std::pair<RE::FormID, RE::TESForm*> GetFormWithID(const std::string& a_str, bool a_resolveForm);
 	RE::FormID                          GetFormID(const std::string& a_str);
+	RE::FormID                          GetANIOFormID(const std::string& a_str);
 
 	FormIDOrSet GetSwapFormID(const std::string& a_str);
 }
