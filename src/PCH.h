@@ -4,6 +4,7 @@
 #define NOMINMAX
 
 #include <ranges>
+#include <set>
 
 #include "RE/Skyrim.h"
 #include "REX/REX.h"

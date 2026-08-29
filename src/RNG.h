@@ -26,7 +26,7 @@ struct AOS_RNG
 public:
 	AOS_RNG() = default;
 	AOS_RNG(const Chance& a_chance, const RE::Actor* a_actor, RE::TESObjectANIO* a_animObject);
-	AOS_RNG(const Chance& a_chance);
+	explicit AOS_RNG(const Chance& a_chance);
 
 	template <class T>
 	T generate(T a_min, T a_max) const
