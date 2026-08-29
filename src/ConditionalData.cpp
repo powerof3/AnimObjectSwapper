@@ -27,42 +27,60 @@ namespace AnimObjectSwap
 		}
 	}
 
+	FilterRule::FilterRule(const bool a_excludeModifier, const bool a_partialModifier, const std::string& a_value) :
+		excludeModifier(a_excludeModifier),
+		partialModifier(a_partialModifier)
+	{
+		if (a_partialModifier) {
+			data = a_value;  // partial string match
+			return;
+		}
+		if (const auto [processedID, form] = util::GetFormWithID(a_value, true); processedID != 0) {
+			if (form && !form->IsDynamicForm()) {
+				data = form;
+			} else {
+				data = processedID;
+			}
+		} else {
+			REX::ERROR("\t\tFilter [{}] INFO - unable to find form, treating filter as string", a_value);
+			data = a_value;
+		}
+	}
+
 	ConditionFilters::ConditionFilters(std::string a_conditionID, std::vector<std::string>& a_conditions, const std::string& a_traits) :
 		conditionID(std::move(a_conditionID))
 	{
-		NOT.reserve(a_conditions.size());
-		MATCH.reserve(a_conditions.size());
-
-		const auto push_filter = [](std::vector<ConditionData>& a_processed, std::string& a_condition) {
-			if (const auto [processedID, form] = util::GetFormWithID(a_condition, true); processedID != 0) {
-				if (form && !form->IsDynamicForm()) {
-					a_processed.emplace_back(form);
-				} else {
-					a_processed.emplace_back(processedID);
-				}
-			} else {
-				REX::ERROR("\t\tFilter [{}] INFO - unable to find form, treating filter as string", a_condition);
-				a_processed.emplace_back(a_condition);
+		constexpr auto get_filter = [](std::string& entry) {
+			auto  topLevelModifier = (entry[0] == '+' || entry[0] == '-') ? entry[0] : '+';  // -*Guard
+			auto& filterEntry = (topLevelModifier == entry[0]) ? entry.erase(0, 1) : entry;  // *Guard
+			bool  partialModifier = !filterEntry.empty() && filterEntry[0] == '*';
+			if (partialModifier) {
+				filterEntry.erase(0, 1);  // Guard
 			}
+			return FilterRule(topLevelModifier == '-', partialModifier, filterEntry);
 		};
 
 		for (auto& condition : a_conditions) {
-			if (condition.empty()) {
+			REX::STR::TRIM(condition);
+			if (!distribution::is_valid_entry(condition)) {
 				continue;
 			}
 			if (condition.contains('+')) {
-				auto conditions_ALL = REX::STR::SPLIT(condition, "+");
-				for (auto& condition_ALL : conditions_ALL) {
-					push_filter(ALL, condition_ALL);
+				// A, (X + Y + Z), B
+				FilterGroup group;
+				for (auto& ALLEntry : REX::STR::SPLIT(condition, "+")) {
+					REX::STR::TRIM(ALLEntry);
+					if (ALLEntry.empty()) {
+						continue;
+					}
+					group.emplace_back(get_filter(ALLEntry));
 				}
-			} else if (condition[0] == '-') {
-				condition.erase(0, 1);
-				push_filter(NOT, condition);
-			} else if (condition[0] == '*') {
-				condition.erase(0, 1);
-				ANY.emplace_back(condition);
+				if (!group.empty()) {
+					ALL.emplace_back(std::move(group));
+				}
 			} else {
-				push_filter(MATCH, condition);
+				// A or *B or -C or -*D
+				ANY.emplace_back(get_filter(condition));
 			}
 		}
 
@@ -237,30 +255,73 @@ namespace AnimObjectSwap
 		});
 	}
 
+	bool ConditionalInput::IsValid(const FilterRule& a_rule) const
+	{
+		return a_rule.partialModifier ? IsAnyValid(std::get<std::string>(a_rule.data)) : IsValid(a_rule.data);
+	}
+
 	bool ConditionalInput::IsValid(const ConditionFilters& a_filters) const
 	{
+		const auto matches_all = [&](const FilterGroup& a_group) {
+			for (const auto& f : a_group) {
+				if (f.excludeModifier) {
+					if (IsValid(f)) {
+						return false;
+					}
+				} else if (!IsValid(f)) {
+					return false;
+				}
+			}
+			return true;
+		};
+
+		const auto matches_any = [&](const std::vector<FilterRule>& a_group) {
+			bool hasExact = false;
+			bool exactPassed = false;
+
+			bool hasPartial = false;
+			bool partialPassed = false;
+
+			for (const auto& f : a_group) {
+				if (f.excludeModifier) {
+					if (IsValid(f)) {
+						return false;
+					}
+					continue;
+				}
+				if (f.partialModifier) {
+					hasPartial = true;
+					if (!partialPassed && IsValid(f)) {
+						partialPassed = true;
+					}
+				} else {
+					hasExact = true;
+					if (!exactPassed && IsValid(f)) {
+						exactPassed = true;
+					}
+				}
+			}
+
+			return (!hasExact || exactPassed) && (!hasPartial || partialPassed);
+		};
+
+
+		// ALL filters; at least one filter group must match (X+Y+Z or A+B+C)
 		if (!a_filters.ALL.empty()) {
-			if (!std::ranges::all_of(a_filters.ALL, [this](const auto& data) { return IsValid(data); })) {
+			bool any_group_matched = false;
+			for (const auto& group : a_filters.ALL) {
+				if (matches_all(group)) {
+					any_group_matched = true;
+					break;
+				}
+			}
+			if (!any_group_matched) {
 				return false;
 			}
 		}
 
-		if (!a_filters.NOT.empty()) {
-			if (std::ranges::any_of(a_filters.NOT, [this](const auto& data) { return IsValid(data); })) {
-				return false;
-			}
-		}
-
-		if (!a_filters.MATCH.empty()) {
-			if (std::ranges::none_of(a_filters.MATCH, [this](const auto& data) { return IsValid(data); })) {
-				return false;
-			}
-		}
-
-		if (!a_filters.ANY.empty()) {
-			if (std::ranges::none_of(a_filters.ANY, [this](const auto& str) { return IsAnyValid(str); })) {
-				return false;
-			}
+		if (!a_filters.ANY.empty() && !matches_any(a_filters.ANY)) {
+			return false;
 		}
 
 		const auto& traits = a_filters.traits;

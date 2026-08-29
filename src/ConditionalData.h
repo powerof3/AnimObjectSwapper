@@ -16,6 +16,20 @@ namespace AnimObjectSwap
 		std::optional<bool> child{ std::nullopt };
 	};
 
+	// X / -X / *X / -*X
+	struct FilterRule
+	{
+		FilterRule() = default;
+		FilterRule(bool a_excludeModifier, bool a_partialModifier, const std::string& a_value);
+
+		// members
+		bool          excludeModifier{ false };  // -
+		bool          partialModifier{ false };  // *
+		ConditionData data{};
+	};
+
+	using FilterGroup = std::vector<FilterRule>;  // Guard+*Mage+-Thief+-*Bandit
+
 	struct ConditionFilters
 	{
 	public:
@@ -33,12 +47,10 @@ namespace AnimObjectSwap
 		}
 
 		// members
-		std::string                conditionID{};  // path|conditions|traits
-		std::vector<ConditionData> ALL{};
-		std::vector<ConditionData> NOT{};
-		std::vector<ConditionData> MATCH{};
-		std::vector<std::string>   ANY{};
-		Traits                     traits{};
+		std::string              conditionID{};  // path|conditions|traits
+		std::vector<FilterGroup> ALL{};          // Guard+*Mage,-Thief+Horse
+		FilterGroup              ANY{};          // Guard,*Mage,-Thief,-*Bandit
+		Traits                   traits{};
 	};
 
 	template <class T>
@@ -63,6 +75,7 @@ namespace AnimObjectSwap
 		[[nodiscard]] bool IsValid(const std::string& a_string) const;
 
 		[[nodiscard]] bool IsValid(const ConditionData& a_data) const;
+		[[nodiscard]] bool IsValid(const FilterRule& a_rule) const;
 		[[nodiscard]] bool IsAnyValid(const std::string& a_string) const;
 
 		[[nodiscard]] bool IsValid(const ConditionFilters& a_filters) const;

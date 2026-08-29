@@ -18,7 +18,7 @@ namespace AnimObjectSwap
 		SwapAnioData() = delete;
 		SwapAnioData(FormIDOrSet a_id, const Input& a_input);
 
-		RE::TESObjectANIO* GetSwapAnio(const RE::Actor* a_actor) const;
+		RE::TESObjectANIO* GetSwapAnio(const RE::Actor* a_actor, RE::TESObjectANIO* a_animObject) const;
 		static void        GetForms(const std::string& a_path, const std::string& a_str, std::function<void(RE::FormID, SwapAnioData&)> a_func);
 
 		// members

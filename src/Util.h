@@ -11,5 +11,6 @@ namespace util
 	RE::FormID                          GetFormID(const std::string& a_str);
 	RE::FormID                          GetANIOFormID(const std::string& a_str);
 
-	FormIDOrSet GetSwapFormID(const std::string& a_str);
+	FormIDOrSet      GetSwapFormID(const std::string& a_str);
+	FormIDOrderedSet GetANIOFormIDOrderedSet(const std::string& a_str);
 }

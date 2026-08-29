@@ -18,13 +18,36 @@ std::uint64_t AOS_RNG::get_form_seed(const RE::TESForm* a_form)
 	return result;
 }
 
-AOS_RNG::AOS_RNG(const Chance& a_chance, const RE::Actor* a_actor) :
+AOS_RNG::AOS_RNG(const Chance& a_chance, const RE::Actor* a_actor, RE::TESObjectANIO* a_animObject) :
 	type(a_chance.chanceType)
 {
 	switch (type) {
 	case CHANCE_TYPE::kActorHash:
 		{
 			if (a_actor) {
+				seed = get_form_seed(a_actor);
+			} else {
+				type = CHANCE_TYPE::kRandom;
+				seed = a_chance.seed;
+			}
+		}
+		break;
+	case CHANCE_TYPE::kLocationHash:
+		{
+			const RE::TESForm* locOrCell = nullptr;
+			if (a_actor) {
+				if (const auto location = a_actor->GetCurrentLocation()) {
+					locOrCell = location;
+				} else {
+					locOrCell = a_actor->GetParentCell();
+				}
+			}
+			if (locOrCell && a_animObject) {
+				std::uint64_t result = 0;
+				boost::hash_combine(result, get_form_seed(locOrCell));
+				boost::hash_combine(result, get_form_seed(a_animObject));
+				seed = result;
+			} else if (a_actor) {
 				seed = get_form_seed(a_actor);
 			} else {
 				type = CHANCE_TYPE::kRandom;
@@ -49,10 +72,12 @@ Chance::Chance(const std::string& a_str)
 {
 	if (distribution::is_valid_entry(a_str)) {
 		if (a_str.contains("chance")) {
-			if (a_str.contains("S")) {
-				chanceType = CHANCE_TYPE::kActorHash;
-			} else {
+			if (a_str.contains("chanceR")) {
 				chanceType = CHANCE_TYPE::kRandom;
+			} else if (a_str.contains("chanceL")) {
+				chanceType = CHANCE_TYPE::kLocationHash;
+			} else {
+				chanceType = CHANCE_TYPE::kActorHash;
 			}
 
 			if (boost::cmatch match; boost::regex_search(a_str.c_str(), match, regex::generic)) {
@@ -64,10 +89,10 @@ Chance::Chance(const std::string& a_str)
 	}
 }
 
-bool Chance::PassedChance(const RE::Actor* a_actor) const
+bool Chance::PassedChance(const RE::Actor* a_actor, RE::TESObjectANIO* a_animObject) const
 {
 	if (chanceValue < 100.0f) {
-		const AOS_RNG rng(*this, a_actor);
+		const AOS_RNG rng(*this, a_actor, a_animObject);
 		if (const auto rngValue = rng.generate<float>(0.0f, 100.0f); rngValue > chanceValue) {
 			return false;
 		}

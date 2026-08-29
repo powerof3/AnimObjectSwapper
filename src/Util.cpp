@@ -53,14 +53,30 @@ namespace util
 					REX::ERROR("\t\t\tfailed to process {} (SWAP formID not found or not an AnimObject)", IDStr);
 				}
 			}
-			if (!set.empty()) {
-				std::ranges::sort(set);
-				const auto dupes = std::ranges::unique(set);
-				set.erase(dupes.begin(), dupes.end());
-			}
+			std::ranges::sort(set);
+			const auto dupes = std::ranges::unique(set);
+			set.erase(dupes.begin(), dupes.end());
 			return set;
 		} else {
 			return GetANIOFormID(a_str);
 		}
+	}
+
+	FormIDOrderedSet GetANIOFormIDOrderedSet(const std::string& a_str)
+	{
+		FormIDOrderedSet set;
+		if (a_str.contains(",")) {
+			const auto IDStrs = REX::STR::SPLIT(a_str, ",");
+			for (auto& IDStr : IDStrs) {
+				if (auto formID = GetANIOFormID(IDStr); formID != 0) {
+					set.emplace(formID);
+				} else {
+					REX::ERROR("\t\t\tfailed to process {} (formID not found or not an AnimObject)", IDStr);
+				}
+			}
+		} else if (auto formID = GetANIOFormID(a_str); formID != 0) {
+			set.emplace(formID);
+		}
+		return set;
 	}
 }

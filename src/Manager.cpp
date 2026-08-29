@@ -108,15 +108,15 @@ namespace AnimObjectSwap
 		REX::INFO("{:*^30}", "END");
 	}
 
-	RE::TESObjectANIO* Manager::GetSwappedAnimObjectConditional(RE::Actor* a_actor, const RE::FormID a_animObjectID) const
+	RE::TESObjectANIO* Manager::GetSwappedAnimObjectConditional(RE::Actor* a_actor, RE::TESObjectANIO* a_animObject) const
 	{
-		if (const auto it = swapAnimObjectsConditional.find(a_animObjectID); it != swapAnimObjectsConditional.end()) {
+		if (const auto it = swapAnimObjectsConditional.find(a_animObject->GetFormID()); it != swapAnimObjectsConditional.end()) {
 			ConditionalInput input(a_actor);
 			
 			for (auto& [filters, swapDataVec] : it->second | std::ranges::views::reverse) {
 				if (input.IsValid(filters)) {
 					for (auto& swapData : swapDataVec | std::ranges::views::reverse) {
-						if (const auto swapAnio = swapData.GetSwapAnio(a_actor)) {
+						if (const auto swapAnio = swapData.GetSwapAnio(a_actor, a_animObject)) {
 							return swapAnio;
 						}
 					}
@@ -129,18 +129,17 @@ namespace AnimObjectSwap
 
 	RE::TESObjectANIO* Manager::GetSwappedAnimObject(RE::TESObjectREFR* a_user, RE::TESObjectANIO* a_animObject)
 	{
-		const auto baseANIO = a_animObject->GetFormID();
 		const auto actor = a_user ? a_user->As<RE::Actor>() : nullptr;
 
 		if (actor) {
-			if (const auto swapAnio = GetSwappedAnimObjectConditional(actor, baseANIO)) {
+			if (const auto swapAnio = GetSwappedAnimObjectConditional(actor, a_animObject)) {
 				return swapAnio;
 			}
 		}
 
-		if (const auto it = swapAnimObjects.find(baseANIO); it != swapAnimObjects.end()) {
+		if (const auto it = swapAnimObjects.find(a_animObject->GetFormID()); it != swapAnimObjects.end()) {
 			for (auto& swapData : it->second | std::ranges::views::reverse) {
-				if (const auto swapAnio = swapData.GetSwapAnio(actor)) {
+				if (const auto swapAnio = swapData.GetSwapAnio(actor, a_animObject)) {
 					return swapAnio;
 				}
 			}
