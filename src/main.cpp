@@ -1,6 +1,5 @@
 #include "Hooks.h"
 #include "Manager.h"
-#include "MergeMapperPluginAPI.h"
 
 void MessageHandler(SKSE::MessagingInterface::Message* a_message)
 {
@@ -24,10 +23,7 @@ void MessageHandler(SKSE::MessagingInterface::Message* a_message)
 		}
 		break;
 	case SKSE::MessagingInterface::kDataLoaded:
-		{
-			REX::INFO("{:*^30}", "INI");
-			AnimObjectSwap::Manager::GetSingleton()->LoadForms();
-		}
+		AnimObjectSwap::Manager::GetSingleton()->LoadForms();
 		break;
 	default:
 		break;

@@ -1,10 +1,11 @@
 {
   "name": "anim-object-swapper",
-  "version-string": "1.2.0",
+  "version-string": "2.0.0",
   "description": "Anim Object Swapper",
   "homepage": "",
   "license": "GPL-3.0-or-later",
   "dependencies": [
+    "boost-regex",
     "boost-unordered",
     {
       "name": "commonlib-shared",

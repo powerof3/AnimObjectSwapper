@@ -1,6 +1,9 @@
 set(headers ${headers}
+	src/ConditionalData.h
 	src/Hooks.h
-	src/LookupFilters.h
 	src/Manager.h
 	src/PCH.h
+	src/RNG.h
+	src/SwapData.h
+	src/Util.h
 )

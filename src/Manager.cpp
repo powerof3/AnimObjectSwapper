@@ -1,55 +1,22 @@
 #include "Manager.h"
-#include "LookupFilters.h"
-#include "MergeMapperPluginAPI.h"
-
-#include <SimpleIni.h>
-#undef ERROR
 
 namespace AnimObjectSwap
 {
-	RE::FormID Manager::GetFormID(const std::string& a_str)
+	void Manager::LoadForms()
 	{
-		if (const auto splitID = REX::STR::SPLIT(a_str, "~"); splitID.size() == 2) {
-			RE::FormID resolvedID;
+		REX::INFO("{:*^30}", "INI");
 
-			const auto  formID = REX::STR::TO_NUM<RE::FormID>(splitID[0], true);
-			const auto& modName = splitID[1];
-			if (g_mergeMapperInterface) {
-				const auto [mergedModName, mergedFormID] = g_mergeMapperInterface->GetNewFormID(modName.c_str(), formID);
-				resolvedID = RE::TESDataHandler::GetSingleton()->LookupFormID(mergedFormID, mergedModName);
-			} else {
-				resolvedID = RE::TESDataHandler::GetSingleton()->LookupFormID(formID, modName);
-			}
-
-			return resolvedID;
-		}
-		if (REX::STR::IS_ONLY_HEX(a_str, true)) {
-			const auto formID = REX::STR::TO_NUM<RE::FormID>(a_str, true);
-			if (const auto form = RE::TESForm::LookupByID(formID)) {
-				return formID;
-			}
-		}
-		if (const auto form = RE::TESForm::LookupByEditorID(a_str)) {
-			return form->GetFormID();
-		}
-		return static_cast<RE::FormID>(0);
-	}
-
-	bool Manager::LoadForms()
-	{
-		std::vector<std::string> configs = dist::get_configs(R"(Data\)", "_ANIO"sv);
+		std::vector<std::string> configs = distribution::get_configs(R"(Data\)", "_ANIO"sv);
 
 		if (configs.empty()) {
 			REX::WARN("No .ini files with _ANIO suffix were found within the Data folder, aborting...");
-			return false;
+			return;
 		}
 
-		REX::INFO("{} matching inis found", configs.size());
-
-		std::ranges::sort(configs);
+		REX::INFO("{} matching inis found...", configs.size());
 
 		for (auto& path : configs) {
-			REX::INFO("\tINI : {}", path);
+			REX::INFO("INI : {}", path);
 
 			CSimpleIniA ini;
 			ini.SetUnicode();
@@ -57,7 +24,7 @@ namespace AnimObjectSwap
 			ini.SetAllowKeyOnly();
 
 			if (const auto rc = ini.LoadFile(path.c_str()); rc < 0) {
-				REX::ERROR("\t\tcouldn't read INI");
+				REX::ERROR("\tcouldn't read INI");
 				continue;
 			}
 
@@ -65,98 +32,41 @@ namespace AnimObjectSwap
 			ini.GetAllSections(sections);
 			sections.sort(CSimpleIniA::Entry::LoadOrder());
 
-			for (auto& [section, comment, keyOrder] : sections) {
-				bool            noConditions = true;
-				ConditionalSwap conditionalSwap{};
+			for (auto& [_section, comment, keyOrder] : sections) {
+				std::string section = _section;
 
-				constexpr auto push_filter = [](const std::string& a_condition, FormIDStrVec& a_processedFilters) {
-					if (const auto processedID = GetFormID(a_condition); processedID != 0) {
-						a_processedFilters.push_back(processedID);
-					} else {
-						REX::ERROR("\t\t\tFilter  [{}] INFO - unable to find form, treating filter as string", a_condition);
-						a_processedFilters.push_back(a_condition);
-					}
-				};
+				CSimpleIniA::TNamesDepend values;
+				ini.GetAllKeys(section.c_str(), values);
+				values.sort(CSimpleIniA::Entry::LoadOrder());
 
-				constexpr auto split_sub_string = [](const std::string& a_str, const std::string& a_delimiter = ",") {
-					if (dist::is_valid_entry(a_str)) {
-						return REX::STR::SPLIT(a_str, a_delimiter);
-					}
-					return std::vector<std::string>();
-				};
-
-				if (REX::STR::ICONTAINS(section, "|")) {
-					noConditions = false;
-
-					auto conditions = REX::STR::SPLIT(section, "|");  // [ANIO|FILTERS|TRAITS]
-					auto size = conditions.size();
-
-					if (size > 1) {
-						auto filters = split_sub_string(conditions[1]);
-						for (auto& filter : filters) {
-							if (filter.contains("+"sv)) {
-								auto filters_ALL = REX::STR::SPLIT(filter, "+");
-								for (auto& filter_ALL : filters_ALL) {
-									push_filter(filter_ALL, conditionalSwap.conditions.ALL);
-								}
-							} else {
-								auto id = filter.at(0);
-								if (id == '-') {
-									filter.erase(0, 1);
-									push_filter(filter, conditionalSwap.conditions.NOT);
-								} else if (id == '*') {
-									filter.erase(0, 1);
-									conditionalSwap.conditions.ANY.push_back(filter);  // string
-								} else {
-									push_filter(filter, conditionalSwap.conditions.MATCH);
-								}
-							}
-						}
-					}
-
-					if (size > 2) {
-						const auto& traits = split_sub_string(conditions[2]);
-						for (auto& trait : traits) {
-							if (trait == "M" || trait == "-F") {
-								conditionalSwap.conditions.traits.sex = RE::SEX::kMale;
-							} else if (trait == "F" || trait == "-M") {
-								conditionalSwap.conditions.traits.sex = RE::SEX::kFemale;
-							} else if (trait == "C") {
-								conditionalSwap.conditions.traits.child = true;
-							} else if (trait == "-C") {
-								conditionalSwap.conditions.traits.child = false;
-							}
-						}
-					}
+				if (values.empty()) {
+					continue;
 				}
 
-				if (const auto values = ini.GetSection(section); values && !values->empty()) {
-					for (const auto& key : *values | std::views::keys) {
-						auto splitValue = REX::STR::SPLIT(key.pItem, "|");
+				if (section.contains('|')) {
+					auto splitSection = REX::STR::SPLIT(section, "|");  // [ANIO|conditions|traits]
+					auto conditions = REX::STR::SPLIT(splitSection[1], ",");
 
-						if (RE::FormID baseAnio = GetFormID(splitValue[0]); baseAnio != 0) {
-							FormIDSet tempSwapAnimObjects{};
+					REX::INFO("\treading [{}] : {} conditions", splitSection[0], conditions.size());
 
-							auto swapAnioEntry = REX::STR::SPLIT(splitValue[1], ",");
-							for (auto& swapAnioStr : swapAnioEntry) {
-								if (RE::FormID swapAnio = GetFormID(swapAnioStr); swapAnio != 0) {
-									if (noConditions) {
-										_animObjects[baseAnio].insert(swapAnio);
-									} else {
-										tempSwapAnimObjects.insert(swapAnio);
-									}
-								} else {
-									REX::ERROR("\t\t\tSwap ANIO [{}] FAIL (invalid formID/edid::get_editorID)", swapAnioStr);
-								}
-							}
+					ConditionFilters processedConditions(
+						path.substr(4) + "|" + splitSection[1] + (splitSection.size() > 2 ? "|" + splitSection[2] : ""),
+						conditions,
+						splitSection.size() > 2 ? splitSection[2] : std::string{});
 
-							if (!noConditions) {
-								conditionalSwap.swappedAnimObjects = tempSwapAnimObjects;
-								_animObjectsConditional[baseAnio].push_back(conditionalSwap);
-							}
-						} else {
-							REX::ERROR("\t\t\tBase ANIO [{}] FAIL (invalid formID/edid::get_editorID)", splitValue[0]);
-						}
+					REX::INFO("\t\t\t{} anim object swaps found", values.size());
+					for (const auto& key : values) {
+						SwapAnioData::GetForms(path, key.pItem, [&](const RE::FormID a_baseID, SwapAnioData& a_swapData) {
+							swapAnimObjectsConditional[a_baseID][processedConditions].emplace_back(a_swapData);
+						});
+					}
+				} else {
+					REX::INFO("\treading [{}]", section);
+					REX::INFO("\t\t\t{} anim object swaps found", values.size());
+					for (const auto& key : values) {
+						SwapAnioData::GetForms(path, key.pItem, [&](const RE::FormID a_baseID, SwapAnioData& a_swapData) {
+							swapAnimObjects[a_baseID].emplace_back(a_swapData);
+						});
 					}
 				}
 			}
@@ -164,54 +74,78 @@ namespace AnimObjectSwap
 
 		REX::INFO("{:*^30}", "RESULT");
 
-		REX::INFO("{} animobject swaps found", _animObjects.size());
-		for (auto& animObject : _animObjects) {
-			REX::INFO("\t{} : {} variations", RE::TESForm::LookupByID(animObject.first)->GetFormEditorID(), animObject.second.size());
+		REX::INFO("{} anim object swaps", swapAnimObjects.size());
+		REX::INFO("{} conditional anim object swaps", swapAnimObjectsConditional.size());
+
+		REX::INFO("{:*^30}", "CONFLICTS");
+
+		bool hasConflicts = false;
+		if (!swapAnimObjects.empty()) {
+			for (auto& [baseID, swapDataVec] : swapAnimObjects) {
+				if (swapDataVec.size() > 1) {
+					const auto& winningRecord = swapDataVec.back();
+					if (winningRecord.chance.chanceValue != 100) {  // ignore if winning record is randomized
+						continue;
+					}
+					hasConflicts = true;
+					auto winningForm = REX::STR::SPLIT(winningRecord.record, "|");
+					REX::WARN("\t{}", winningForm[0]);
+					REX::WARN("\t\twinning swap : {} ({})", winningForm[1], swapDataVec.back().path);
+					REX::WARN("\t\t{} conflicts", swapDataVec.size() - 1);
+					for (auto it = swapDataVec.rbegin() + 1; it != swapDataVec.rend(); ++it) {
+						auto losingRecord = it->record.substr(it->record.find('|') + 1);
+						REX::WARN("\t\t\t{} ({})", losingRecord, it->path);
+					}
+				}
+			}
+		}
+		if (!hasConflicts) {
+			REX::INFO("\tNo conflicts found");
+		} else {
+			RE::ConsoleLog::GetSingleton()->Print("[AOS] Conflicts found, check po3_AnimObjectSwapper.log in %s for more info\n", SKSE::log::log_directory()->string().c_str());
 		}
 
-		REX::INFO("{} conditional animobject swaps found", _animObjectsConditional.size());
-		for (auto& animObject : _animObjectsConditional) {
-			REX::INFO("\t{} : {} conditional variations", RE::TESForm::LookupByID(animObject.first)->GetFormEditorID(), animObject.second.size());
-		}
-
-		return !_animObjects.empty() || !_animObjectsConditional.empty();
+		REX::INFO("{:*^30}", "END");
 	}
 
-	RE::TESObjectANIO* Manager::GetSwappedAnimObject(RE::TESObjectREFR* a_user, RE::TESObjectANIO* a_animObject)
+	RE::TESObjectANIO* Manager::GetSwappedAnimObjectConditional(RE::Actor* a_actor, const RE::FormID a_animObjectID) const
 	{
-		const auto origFormID = a_animObject->GetFormID();
-
-		if (const auto it = _animObjectsConditional.find(origFormID); it != _animObjectsConditional.end()) {
-			if (const auto actor = a_user ? a_user->As<RE::Actor>() : nullptr; actor) {
-				if (const auto result = std::ranges::find_if(it->second, [&](const auto& conditionalSwap) {
-						return Filter::PassFilter(actor, conditionalSwap.conditions);
-					});
-					result != it->second.end()) {
-					return GetSwappedAnimObject(result->swappedAnimObjects);
+		if (const auto it = swapAnimObjectsConditional.find(a_animObjectID); it != swapAnimObjectsConditional.end()) {
+			ConditionalInput input(a_actor);
+			
+			for (auto& [filters, swapDataVec] : it->second | std::ranges::views::reverse) {
+				if (input.IsValid(filters)) {
+					for (auto& swapData : swapDataVec | std::ranges::views::reverse) {
+						if (const auto swapAnio = swapData.GetSwapAnio(a_actor)) {
+							return swapAnio;
+						}
+					}
 				}
 			}
 		}
 
-		if (const auto it = _animObjects.find(origFormID); it != _animObjects.end()) {
-			if (const auto& swapANIO = it->second; !swapANIO.empty()) {
-				return GetSwappedAnimObject(swapANIO);
+		return nullptr;
+	}
+
+	RE::TESObjectANIO* Manager::GetSwappedAnimObject(RE::TESObjectREFR* a_user, RE::TESObjectANIO* a_animObject)
+	{
+		const auto baseANIO = a_animObject->GetFormID();
+		const auto actor = a_user ? a_user->As<RE::Actor>() : nullptr;
+
+		if (actor) {
+			if (const auto swapAnio = GetSwappedAnimObjectConditional(actor, baseANIO)) {
+				return swapAnio;
+			}
+		}
+
+		if (const auto it = swapAnimObjects.find(baseANIO); it != swapAnimObjects.end()) {
+			for (auto& swapData : it->second | std::ranges::views::reverse) {
+				if (const auto swapAnio = swapData.GetSwapAnio(actor)) {
+					return swapAnio;
+				}
 			}
 		}
 
 		return a_animObject;
-	}
-
-	RE::TESObjectANIO* Manager::GetSwappedAnimObject(const FormIDSet& a_animObjects) const
-	{
-		if (a_animObjects.size() == 1) {
-			return RE::TESForm::LookupByID<RE::TESObjectANIO>(*a_animObjects.begin());
-		} else {
-			// return random element from set
-
-			auto setEnd = std::distance(a_animObjects.begin(), a_animObjects.end()) - 1;
-			auto randIt = REX::TRandom<std::size_t>().Generate(0, setEnd);
-
-			return RE::TESForm::LookupByID<RE::TESObjectANIO>(*std::next(a_animObjects.begin(), randIt));
-		}
 	}
 }

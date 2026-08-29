@@ -1,5 +1,6 @@
 #pragma once
 
+#define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
 
 #include <ranges>
@@ -8,6 +9,9 @@
 #include "REX/REX.h"
 #include "SKSE/SKSE.h"
 
+#include <MergeMapperPluginAPI.h>
+
+#include <boost/regex.hpp>
 #include <boost/unordered/unordered_flat_map.hpp>
 #include <boost/unordered/unordered_flat_set.hpp>
 #include <spdlog/sinks/basic_file_sink.h>
@@ -16,9 +20,21 @@
 #include <ClibUtil/distribution.hpp>
 #include <ClibUtil/editorID.hpp>
 
+#include <SimpleIni.h>
+#undef ERROR
+
+namespace distribution = clib_util::distribution;
+namespace editorID = clib_util::editorID;
+
 using namespace std::literals;
-namespace dist = clib_util::distribution;
-namespace edid = clib_util::editorID;
+using namespace REX::STR::literals;
+
+// for visting variants
+template <class... Ts>
+struct overload : Ts...
+{
+	using Ts::operator()...;
+};
 
 template <class K, class D, class H = boost::hash<K>, class KEqual = std::equal_to<K>>
 using Map = boost::unordered_flat_map<K, D, H, KEqual>;
@@ -26,11 +42,11 @@ using Map = boost::unordered_flat_map<K, D, H, KEqual>;
 template <class K, class H = boost::hash<K>, class KEqual = std::equal_to<K>>
 using Set = boost::unordered_flat_set<K, H, KEqual>;
 
-using FormIDSet = Set<RE::FormID>;
-using FormIDMap = Map<RE::FormID, FormIDSet>;
+using FormIDSet = std::vector<RE::FormID>;
+using FormIDOrSet = std::variant<RE::FormID, FormIDSet>;
 
-using FormIDStr = std::variant<RE::FormID, std::string>;
-using FormIDStrVec = std::vector<FormIDStr>;
+template <class T>
+using FormIDMap = Map<RE::FormID, T>;
 
 namespace stl
 {
@@ -48,4 +64,5 @@ namespace stl
 #	define OFFSET(se, ae) se
 #endif
 
+#include "Util.h"
 #include "Version.h"
