@@ -54,7 +54,7 @@ namespace AnimObjectSwap
 	};
 
 	template <class T>
-	using ConditionalData = std::map<ConditionFilters, std::vector<T>>;
+	using ConditionalData = InsertionMap<ConditionFilters, std::vector<T>>;
 
 	struct ConditionalInput
 	{

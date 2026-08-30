@@ -53,6 +53,32 @@ using FormIDOrderedSet = OrderedSet<RE::FormID>;
 template <class T>
 using FormIDMap = Map<RE::FormID, T>;
 
+template <class K, class D>
+class InsertionMap
+{
+public:
+	D& operator[](const K& a_key)
+	{
+		for (auto& [key, data] : _map) {
+			if (a_key == key) {
+				return data;
+			}
+		}
+		return _map.emplace_back(a_key, D{}).second;
+	}
+
+	[[nodiscard]] auto begin() { return _map.begin(); }
+	[[nodiscard]] auto end() { return _map.end(); }
+	[[nodiscard]] auto begin() const { return _map.begin(); }
+	[[nodiscard]] auto end() const { return _map.end(); }
+
+	[[nodiscard]] bool        empty() const { return _map.empty(); }
+	[[nodiscard]] std::size_t size() const { return _map.size(); }
+
+private:
+	std::vector<std::pair<K, D>> _map{};
+};
+
 namespace stl
 {
 	template <class T>
