@@ -27,12 +27,51 @@ namespace AnimObjectSwap
 		}
 	}
 
+	// sort filter according to how expensive it is
+	std::int32_t FilterRule::GetFilterCost(bool a_allFilter) const
+	{
+		std::int32_t cost = 0;
+
+		const auto calc_string_cost = [&](bool a_partialModifier) {
+			if (isModelPath) {
+				cost += (a_partialModifier ? 60 : 50);
+			} else {
+				cost += (a_partialModifier ? 40 : 30);
+			}
+		};
+
+		std::visit(overload{
+					   [&](RE::TESForm* a_form) {
+						   if (a_form->Is(RE::FormType::FormList)) {
+							   cost += 30;
+						   } else if (a_form->Is(RE::FormType::Keyword) || a_form->IsInventoryObject()) {
+							   cost += 20;
+						   } else {
+							   cost += 10;
+						   }
+					   },
+					   [&](RE::FormID) { cost += 20; },
+					   [&](const std::string&) { calc_string_cost(partialModifier); } },
+			data);
+
+		if (a_allFilter ? !excludeModifier : excludeModifier) {
+			cost -= 1;
+		}
+
+		return cost;
+	}
+
 	FilterRule::FilterRule(const bool a_excludeModifier, const bool a_partialModifier, const std::string& a_value) :
 		excludeModifier(a_excludeModifier),
 		partialModifier(a_partialModifier)
 	{
+		constexpr auto is_model_path = [](const std::string& a_str) {
+			return REX::STR::ICONTAINS(a_str, ".nif") || a_str.contains('\\');
+		};
+
 		if (a_partialModifier) {
-			data = a_value;  // partial string match
+			data = a_value;
+			isModelPath = is_model_path(a_value);
 			return;
 		}
 		if (const auto [processedID, form] = util::GetFormWithID(a_value, true); processedID != 0) {
@@ -44,6 +83,7 @@ namespace AnimObjectSwap
 		} else {
 			REX::ERROR("\t\tFilter [{}] INFO - unable to find form, treating filter as string", a_value);
 			data = a_value;
+			isModelPath = is_model_path(a_value);
 		}
 	}
 
@@ -84,9 +124,45 @@ namespace AnimObjectSwap
 			}
 		}
 
+		std::ranges::stable_sort(ANY, {}, [&](const auto& f) { return f.GetFilterCost(false); });
+		for (auto& group : ALL) {
+			std::ranges::stable_sort(group, {}, [&](const auto& f) { return f.GetFilterCost(true); });
+		}
+
 		if (distribution::is_valid_entry(a_traits)) {
 			traits = Traits(a_traits);
 		}
+	}
+
+	const Set<RE::TESBoundObject*>& ConditionalInput::GetInventory() const
+	{
+		if (!inventory) {
+			Set<RE::TESBoundObject*> tempSet;
+			const auto actorInventory = actor->GetInventory([](RE::TESBoundObject& a_object) {
+				return a_object.IsInventoryObject();
+			},
+				true);
+			tempSet.reserve(actorInventory.size());
+			for (const auto& [object, data] : actorInventory) {
+				if (data.first < 0) {
+					continue;
+				}
+				tempSet.emplace(object);
+				if (const auto weapon = object->As<RE::TESObjectWEAP>(); weapon && weapon->templateWeapon) {
+					tempSet.emplace(weapon->templateWeapon);
+				}
+			}
+			inventory.emplace(std::move(tempSet));
+		}
+		return *inventory;
+	}
+
+	const std::string& ConditionalInput::GetActorBaseEDID() const
+	{
+		if (!actorbaseEDID) {
+			actorbaseEDID.emplace(actorbase ? editorID::get_editorID(actorbase) : std::string{});
+		}
+		return *actorbaseEDID;
 	}
 
 	bool ConditionalInput::IsValid(RE::TESForm* a_form) const
@@ -111,12 +187,8 @@ namespace AnimObjectSwap
 						if (actor->HasKeyword(keyword)) {
 							return true;
 						}
-						return std::ranges::any_of(inventory, [&](const auto& inv) {
-							const auto& [count, entryData] = inv.second;
-							if (count < 0) {
-								return false;
-							}
-							const auto keywordForm = inv.first->template As<RE::BGSKeywordForm>();
+						return std::ranges::any_of(GetInventory(), [&](const auto& object) {
+							const auto keywordForm = object->template As<RE::BGSKeywordForm>();
 							return keywordForm && keywordForm->HasKeyword(keyword);
 						});
 					}
@@ -150,17 +222,7 @@ namespace AnimObjectSwap
 				}
 			default:
 				if (const auto boundObj = a_form->As<RE::TESBoundObject>(); boundObj && boundObj->IsInventoryObject()) {
-					return std::ranges::any_of(inventory, [&](const auto& inv) {
-						const auto& [count, entryData] = inv.second;
-						if (count < 0) {
-							return false;
-						}
-						if (inv.first == boundObj) {
-							return true;
-						}
-						const auto weapon = inv.first->template As<RE::TESObjectWEAP>();
-						return weapon && weapon->templateWeapon == boundObj;
-					});
+					return GetInventory().contains(boundObj);
 				}
 				return false;
 			}
@@ -170,20 +232,15 @@ namespace AnimObjectSwap
 	}
 
 	bool ConditionalInput::IsValid(const RE::FormID a_formID) const
-	{
+	{ 
 		return IsValid(RE::TESForm::LookupByID(a_formID));
 	}
 
-	bool ConditionalInput::IsValid(const std::string& a_string) const
+	bool ConditionalInput::IsValid(const std::string& a_string, bool a_isModelPath) const
 	{
-		// model path
-		if (REX::STR::ICONTAINS(a_string, ".nif") || a_string.contains('\\')) {
-			return std::ranges::any_of(inventory, [&](const auto& inv) {
-				const auto& [count, entryData] = inv.second;
-				if (count < 0) {
-					return false;
-				}
-				const auto model = inv.first->template As<RE::TESModel>();
+		if (a_isModelPath) {
+			return std::ranges::any_of(GetInventory(), [&](const auto& object) {
+				const auto model = object->template As<RE::TESModel>();
 				return model && REX::STR::ICONTAINS(model->model, a_string);
 			});
 		}
@@ -194,12 +251,8 @@ namespace AnimObjectSwap
 			return true;
 		}
 		// inventory item keyword
-		return std::ranges::any_of(inventory, [&](const auto& inv) {
-			const auto& [count, entryData] = inv.second;
-			if (count < 0) {
-				return false;
-			}
-			const auto keywordForm = inv.first->template As<RE::BGSKeywordForm>();
+		return std::ranges::any_of(GetInventory(), [&](const auto& object) {
+			const auto keywordForm = object->template As<RE::BGSKeywordForm>();
 			return keywordForm && keywordForm->HasKeywordString(a_string);
 		});
 	}
@@ -223,45 +276,49 @@ namespace AnimObjectSwap
 		return result;
 	}
 
-	bool ConditionalInput::IsAnyValid(const std::string& a_string) const
+	bool ConditionalInput::IsAnyValid(const std::string& a_string, bool a_isModelPath) const
 	{
-		if (REX::STR::ICONTAINS(a_string, ".nif") || a_string.contains('\\')) {
-			return std::ranges::any_of(inventory, [&](const auto& inv) {
-				const auto& [count, entryData] = inv.second;
-				if (count < 0) {
-					return false;
-				}
-				const auto model = inv.first->template As<RE::TESModel>();
+		if (a_isModelPath) {
+			return std::ranges::any_of(GetInventory(), [&](const auto& object) {
+				const auto model = object->template As<RE::TESModel>();
 				return model && REX::STR::ICONTAINS(model->model, a_string);
 			});
 		}
 		if (actorbase) {
-			if (actorbase->ContainsKeyword(a_string) || REX::STR::ICONTAINS(actorbaseEDID, a_string)) {
+			if (actorbase->ContainsKeyword(a_string) || REX::STR::ICONTAINS(GetActorBaseEDID(), a_string)) {
 				return true;
 			}
 		}
 		if (currentCell && REX::STR::ICONTAINS(currentCell->GetFormEditorID(), a_string)) {
 			return true;
 		}
-		return std::ranges::any_of(inventory, [&](const auto& inv) {
-			const auto& [count, entryData] = inv.second;
-			if (count < 0) {
-				return false;
-			}
-			if (const auto keywordForm = inv.first->template As<RE::BGSKeywordForm>(); keywordForm && keywordForm->ContainsKeywordString(a_string)) {
+		return std::ranges::any_of(GetInventory(), [&](const auto& object) {
+			if (const auto keywordForm = object->template As<RE::BGSKeywordForm>(); keywordForm && keywordForm->ContainsKeywordString(a_string)) {
 				return true;
 			}
-			return REX::STR::ICONTAINS(editorID::get_editorID(inv.first), a_string);
+			return REX::STR::ICONTAINS(editorID::get_editorID(object), a_string);
 		});
 	}
 
 	bool ConditionalInput::IsValid(const FilterRule& a_rule) const
 	{
-		return a_rule.partialModifier ? IsAnyValid(std::get<std::string>(a_rule.data)) : IsValid(a_rule.data);
+		return a_rule.partialModifier ? IsAnyValid(std::get<std::string>(a_rule.data), a_rule.isModelPath) : IsValid(a_rule.data);
 	}
 
 	bool ConditionalInput::IsValid(const ConditionFilters& a_filters) const
 	{
+		const auto& traits = a_filters.traits;
+
+		if (traits.sex != RE::SEX::kNone) {
+			if (actorbase && actorbase->GetSex() != traits.sex) {
+				return false;
+			}
+		}
+
+		if (traits.child && actor->IsChild() != *traits.child) {
+			return false;
+		}
+
 		const auto matches_all = [&](const FilterGroup& a_group) {
 			for (const auto& f : a_group) {
 				if (f.excludeModifier) {
@@ -305,7 +362,6 @@ namespace AnimObjectSwap
 			return (!hasExact || exactPassed) && (!hasPartial || partialPassed);
 		};
 
-
 		// ALL filters; at least one filter group must match (X+Y+Z or A+B+C)
 		if (!a_filters.ALL.empty()) {
 			bool any_group_matched = false;
@@ -321,18 +377,6 @@ namespace AnimObjectSwap
 		}
 
 		if (!a_filters.ANY.empty() && !matches_any(a_filters.ANY)) {
-			return false;
-		}
-
-		const auto& traits = a_filters.traits;
-
-		if (traits.sex != RE::SEX::kNone) {
-			if (actorbase && actorbase->GetSex() != traits.sex) {
-				return false;
-			}
-		}
-
-		if (traits.child && actor->IsChild() != *traits.child) {
 			return false;
 		}
 

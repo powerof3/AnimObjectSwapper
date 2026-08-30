@@ -5,6 +5,8 @@
 
 namespace AnimObjectSwap
 {
+	using ConfigPath = std::shared_ptr<std::string>;
+
 	class SwapAnioData
 	{
 	public:
@@ -12,14 +14,14 @@ namespace AnimObjectSwap
 		{
 			std::string chance;
 			std::string record;
-			std::string path;
+			ConfigPath  path;
 		};
 
 		SwapAnioData() = delete;
 		SwapAnioData(FormIDOrSet a_id, const Input& a_input);
 
 		RE::TESObjectANIO* GetSwapAnio(const RE::Actor* a_actor, RE::TESObjectANIO* a_animObject) const;
-		static void        GetForms(const std::string& a_path, const std::string& a_str, std::function<void(RE::FormID, SwapAnioData&)> a_func);
+		static void        GetForms(const ConfigPath& a_path, const std::string& a_str, std::function<void(RE::FormID, SwapAnioData&)> a_func);
 
 		// members
 		FormIDOrSet formIDSet{};
@@ -27,7 +29,7 @@ namespace AnimObjectSwap
 
 		// used for logging conflicts
 		std::string record{};
-		std::string path{};
+		ConfigPath  path{};
 	};
 
 	using SwapAnioDataVec = std::vector<SwapAnioData>;

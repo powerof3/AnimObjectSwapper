@@ -29,7 +29,7 @@ namespace AnimObjectSwap
 		return anio;
 	}
 
-	void SwapAnioData::GetForms(const std::string& a_path, const std::string& a_str, std::function<void(RE::FormID, SwapAnioData&)> a_func)
+	void SwapAnioData::GetForms(const ConfigPath& a_path, const std::string& a_str, std::function<void(RE::FormID, SwapAnioData&)> a_func)
 	{
 		constexpr auto swap_empty = [](const FormIDOrSet& a_set) {
 			if (const auto formID = std::get_if<RE::FormID>(&a_set); formID) {

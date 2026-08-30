@@ -28,6 +28,8 @@ namespace AnimObjectSwap
 				continue;
 			}
 
+			const auto configPath = std::make_shared<std::string>(path);
+
 			CSimpleIniA::TNamesDepend sections;
 			ini.GetAllSections(sections);
 			sections.sort(CSimpleIniA::Entry::LoadOrder());
@@ -49,14 +51,14 @@ namespace AnimObjectSwap
 
 					REX::INFO("\treading [{}] : {} conditions", splitSection[0], conditions.size());
 
-					ConditionFilters processedConditions(
+					auto processedConditions = std::make_shared<const ConditionFilters>(
 						path.substr(5) + "|" + splitSection[1] + (splitSection.size() > 2 ? "|" + splitSection[2] : ""),
 						conditions,
 						splitSection.size() > 2 ? splitSection[2] : std::string{});
 
 					REX::INFO("\t\t\t{} anim object swaps found", values.size());
 					for (const auto& key : values) {
-						SwapAnioData::GetForms(path, key.pItem, [&](const RE::FormID a_baseID, SwapAnioData& a_swapData) {
+						SwapAnioData::GetForms(configPath, key.pItem, [&](const RE::FormID a_baseID, SwapAnioData& a_swapData) {
 							swapAnimObjectsConditional[a_baseID][processedConditions].emplace_back(a_swapData);
 						});
 					}
@@ -64,7 +66,7 @@ namespace AnimObjectSwap
 					REX::INFO("\treading [{}]", section);
 					REX::INFO("\t\t\t{} anim object swaps found", values.size());
 					for (const auto& key : values) {
-						SwapAnioData::GetForms(path, key.pItem, [&](const RE::FormID a_baseID, SwapAnioData& a_swapData) {
+						SwapAnioData::GetForms(configPath, key.pItem, [&](const RE::FormID a_baseID, SwapAnioData& a_swapData) {
 							swapAnimObjects[a_baseID].emplace_back(a_swapData);
 						});
 					}
@@ -90,11 +92,11 @@ namespace AnimObjectSwap
 					hasConflicts = true;
 					auto winningForm = REX::STR::SPLIT(winningRecord.record, "|");
 					REX::WARN("\t{}", winningForm[0]);
-					REX::WARN("\t\twinning swap : {} ({})", winningForm[1], swapDataVec.back().path);
+					REX::WARN("\t\twinning swap : {} ({})", winningForm[1], *swapDataVec.back().path);
 					REX::WARN("\t\t{} conflicts", swapDataVec.size() - 1);
 					for (auto it = swapDataVec.rbegin() + 1; it != swapDataVec.rend(); ++it) {
 						auto losingRecord = it->record.substr(it->record.find('|') + 1);
-						REX::WARN("\t\t\t{} ({})", losingRecord, it->path);
+						REX::WARN("\t\t\t{} ({})", losingRecord, *it->path);
 					}
 				}
 			}
@@ -112,9 +114,9 @@ namespace AnimObjectSwap
 	{
 		if (const auto it = swapAnimObjectsConditional.find(a_animObject->GetFormID()); it != swapAnimObjectsConditional.end()) {
 			ConditionalInput input(a_actor);
-			
+
 			for (auto& [filters, swapDataVec] : it->second | std::ranges::views::reverse) {
-				if (input.IsValid(filters)) {
+				if (input.IsValid(*filters)) {
 					for (auto& swapData : swapDataVec | std::ranges::views::reverse) {
 						if (const auto swapAnio = swapData.GetSwapAnio(a_actor, a_animObject)) {
 							return swapAnio;
