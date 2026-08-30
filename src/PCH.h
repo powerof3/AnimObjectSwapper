@@ -67,6 +67,12 @@ public:
 		return _map.emplace_back(a_key, D{}).second;
 	}
 
+	template <class Comp>
+	void sort(Comp&& a_comp)
+	{
+		std::ranges::stable_sort(_map, std::forward<Comp>(a_comp));
+	}
+
 	[[nodiscard]] auto begin() { return _map.begin(); }
 	[[nodiscard]] auto end() { return _map.end(); }
 	[[nodiscard]] auto begin() const { return _map.begin(); }

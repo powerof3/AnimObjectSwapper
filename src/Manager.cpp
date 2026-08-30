@@ -15,7 +15,11 @@ namespace AnimObjectSwap
 
 		REX::INFO("{} matching inis found...", configs.size());
 
+		std::uint32_t fileIndex = 0;
+
 		for (auto& path : configs) {
+			fileIndex++;
+
 			REX::INFO("INI : {}", path);
 
 			CSimpleIniA ini;
@@ -52,9 +56,9 @@ namespace AnimObjectSwap
 					REX::INFO("\treading [{}] : {} conditions", splitSection[0], conditions.size());
 
 					auto processedConditions = std::make_shared<const ConditionFilters>(
-						path.substr(5) + "|" + splitSection[1] + (splitSection.size() > 2 ? "|" + splitSection[2] : ""),
 						conditions,
-						splitSection.size() > 2 ? splitSection[2] : std::string{});
+						splitSection.size() > 2 ? splitSection[2] : std::string{}, // traits
+						fileIndex);
 
 					REX::INFO("\t\t\t{} anim object swaps found", values.size());
 					for (const auto& key : values) {
@@ -72,6 +76,12 @@ namespace AnimObjectSwap
 					}
 				}
 			}
+		}
+
+		for (auto& conditionalMap : swapAnimObjectsConditional | std::views::values) {
+			conditionalMap.sort([](const auto& a_lhs, const auto& a_rhs) {
+				return a_lhs.first->fileIndex > a_rhs.first->fileIndex;
+			});
 		}
 
 		REX::INFO("{:*^30}", "RESULT");
@@ -115,7 +125,7 @@ namespace AnimObjectSwap
 		if (const auto it = swapAnimObjectsConditional.find(a_animObject->GetFormID()); it != swapAnimObjectsConditional.end()) {
 			ConditionalInput input(a_actor);
 
-			for (auto& [filters, swapDataVec] : it->second | std::ranges::views::reverse) {
+			for (auto& [filters, swapDataVec] : it->second) {
 				if (input.IsValid(*filters)) {
 					for (auto& swapData : swapDataVec | std::ranges::views::reverse) {
 						if (const auto swapAnio = swapData.GetSwapAnio(a_actor, a_animObject)) {

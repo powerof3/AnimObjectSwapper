@@ -37,18 +37,13 @@ namespace AnimObjectSwap
 	{
 	public:
 		ConditionFilters() = default;
-		ConditionFilters(std::string a_conditionID, std::vector<std::string>& a_conditions, const std::string& a_traits);
-
-		bool operator==(const ConditionFilters& a_rhs) const
-		{
-			return conditionID == a_rhs.conditionID;
-		}
+		ConditionFilters(std::vector<std::string>& a_conditions, const std::string& a_traits, std::uint32_t a_fileIndex);
 
 		// members
-		std::string              conditionID{};  // path|conditions|traits
 		std::vector<FilterGroup> ALL{};          // Guard+*Mage,-Thief+Horse
 		FilterGroup              ANY{};          // Guard,*Mage,-Thief,-*Bandit
 		Traits                   traits{};
+		std::uint32_t            fileIndex{ 0 }; 
 	};
 
 	using ConditionFiltersPtr = std::shared_ptr<const ConditionFilters>;
@@ -72,7 +67,7 @@ namespace AnimObjectSwap
 		[[nodiscard]] bool IsValid(RE::FormID a_formID) const;
 		[[nodiscard]] bool IsValid(const std::string& a_string, bool a_isModelPath) const;
 
-		[[nodiscard]] bool IsValid(const ConditionData& a_data) const;
+		[[nodiscard]] bool IsValid(const ConditionData& a_data, bool a_isModelPath) const;
 		[[nodiscard]] bool IsValid(const FilterRule& a_rule) const;
 		[[nodiscard]] bool IsAnyValid(const std::string& a_string, bool a_isModelPath) const;
 

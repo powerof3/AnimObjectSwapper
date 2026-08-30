@@ -12,7 +12,7 @@ namespace AnimObjectSwap
 	RE::TESObjectANIO* SwapAnioData::GetSwapAnio(const RE::Actor* a_actor, RE::TESObjectANIO* a_animObject) const
 	{
 		RE::TESObjectANIO* anio = nullptr;
-		
+
 		if (!chance.PassedChance(a_actor, a_animObject)) {
 			return anio;
 		}
@@ -55,13 +55,14 @@ namespace AnimObjectSwap
 
 		if (const auto baseFormID = util::GetANIOFormID(formPair[0]); baseFormID != 0) {
 			if (const auto swapFormID = util::GetSwapFormID(formPair[1]); !swap_empty(swapFormID)) {
-				if (base_same_as_swap(baseFormID, swapFormID)) {
+				/*if (base_same_as_swap(baseFormID, swapFormID)) {
 					REX::ERROR("\t\t\t\tfail : [{}] (BASE formID == SWAP formID)", a_str);
 					return;
-				}
+				}*/
+				//breaks Sharpen Other Swords
 
 				const Input input(
-					formPair.size() > 2 ? formPair[2] : std::string{},  // chance
+					Chance(formPair.size() > 2 ? formPair[2] : std::string{}),  // chance
 					a_str,
 					a_path);
 				SwapAnioData swapAnioData(swapFormID, input);
@@ -78,10 +79,10 @@ namespace AnimObjectSwap
 				if (swapFormIDs.size() == 1) {
 					const auto swapFormID = *swapFormIDs.begin();
 					for (auto itBaseFormID : baseFormIDs) {
-						if (itBaseFormID == swapFormID) {
+						/*if (itBaseFormID == swapFormID) {
 							REX::ERROR("\t\t\t\tfail : [{}] (BASE formID == SWAP formID)", a_str);
 							continue;
-						}
+						}*/
 						const Input  input(chance, a_str, a_path);
 						SwapAnioData swapAnioData(swapFormID, input);
 
@@ -98,7 +99,7 @@ namespace AnimObjectSwap
 						const auto randIt = a_rng.generate<std::int64_t>(0, setEnd);
 						auto       swapFormID = swapFormIDs.extract(*std::next(swapFormIDs.begin(), randIt));
 						if (swapFormID) {
-							const Input  input(std::string{}, a_str, a_path);
+							const Input  input(chance, a_str, a_path);
 							SwapAnioData swapAnioData(swapFormID.value(), input);
 
 							a_func(itBaseFormID, swapAnioData);

@@ -87,8 +87,8 @@ namespace AnimObjectSwap
 		}
 	}
 
-	ConditionFilters::ConditionFilters(std::string a_conditionID, std::vector<std::string>& a_conditions, const std::string& a_traits) :
-		conditionID(std::move(a_conditionID))
+	ConditionFilters::ConditionFilters(std::vector<std::string>& a_conditions, const std::string& a_traits, std::uint32_t a_fileIndex) :
+		fileIndex(a_fileIndex)
 	{
 		constexpr auto get_filter = [](std::string& entry) {
 			auto  topLevelModifier = (entry[0] == '+' || entry[0] == '-') ? entry[0] : '+';  // -*Guard
@@ -257,7 +257,7 @@ namespace AnimObjectSwap
 		});
 	}
 
-	bool ConditionalInput::IsValid(const ConditionData& a_data) const
+	bool ConditionalInput::IsValid(const ConditionData& a_data, bool a_isModelPath) const
 	{
 		bool result = false;
 
@@ -269,7 +269,7 @@ namespace AnimObjectSwap
 						   result = IsValid(a_formID);
 					   },
 					   [&](const std::string& a_string) {
-						   result = IsValid(a_string);
+						   result = IsValid(a_string, a_isModelPath);
 					   } },
 			a_data);
 
@@ -302,7 +302,7 @@ namespace AnimObjectSwap
 
 	bool ConditionalInput::IsValid(const FilterRule& a_rule) const
 	{
-		return a_rule.partialModifier ? IsAnyValid(std::get<std::string>(a_rule.data), a_rule.isModelPath) : IsValid(a_rule.data);
+		return a_rule.partialModifier ? IsAnyValid(std::get<std::string>(a_rule.data), a_rule.isModelPath) : IsValid(a_rule.data, a_rule.isModelPath);
 	}
 
 	bool ConditionalInput::IsValid(const ConditionFilters& a_filters) const

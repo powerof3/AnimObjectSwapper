@@ -12,7 +12,7 @@ namespace AnimObjectSwap
 	public:
 		struct Input
 		{
-			std::string chance;
+			Chance      chance;
 			std::string record;
 			ConfigPath  path;
 		};
