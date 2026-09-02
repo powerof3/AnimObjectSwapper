@@ -24,8 +24,9 @@ namespace AnimObjectSwap
 		static void        GetForms(const ConfigPath& a_path, const std::string& a_str, std::function<void(RE::FormID, SwapAnioData&)> a_func);
 
 		// members
-		FormIDOrSet formIDSet{};
-		Chance      chance{};
+		FormIDOrSet   formIDSet{};
+		Chance        chance{};
+		std::uint32_t fileIndex{ 0 };
 
 		// used for logging conflicts
 		std::string record{};

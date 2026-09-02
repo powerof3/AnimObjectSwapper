@@ -71,11 +71,19 @@ namespace AnimObjectSwap
 					REX::INFO("\t\t\t{} anim object swaps found", values.size());
 					for (const auto& key : values) {
 						SwapAnioData::GetForms(configPath, key.pItem, [&](const RE::FormID a_baseID, SwapAnioData& a_swapData) {
+							a_swapData.fileIndex = fileIndex;
 							swapAnimObjects[a_baseID].emplace_back(a_swapData);
 						});
 					}
 				}
 			}
+		}
+
+		// sort normal AND conditional map so entries are evaluated top to bottom
+		for (auto& swapDataVec : swapAnimObjects | std::views::values) {
+			std::ranges::stable_sort(swapDataVec, [](const auto& a_lhs, const auto& a_rhs) {
+				return a_lhs.fileIndex > a_rhs.fileIndex;
+			});
 		}
 
 		for (auto& conditionalMap : swapAnimObjectsConditional | std::views::values) {
@@ -95,16 +103,16 @@ namespace AnimObjectSwap
 		if (!swapAnimObjects.empty()) {
 			for (auto& [baseID, swapDataVec] : swapAnimObjects) {
 				if (swapDataVec.size() > 1) {
-					const auto& winningRecord = swapDataVec.back();
+					const auto& winningRecord = swapDataVec.front();
 					if (winningRecord.chance.chanceValue != 100) {  // ignore if winning record is randomized
 						continue;
 					}
 					hasConflicts = true;
 					auto winningForm = REX::STR::SPLIT(winningRecord.record, "|");
 					REX::WARN("\t{}", winningForm[0]);
-					REX::WARN("\t\twinning swap : {} ({})", winningForm[1], *swapDataVec.back().path);
+					REX::WARN("\t\twinning swap : {} ({})", winningForm[1], *winningRecord.path);
 					REX::WARN("\t\t{} conflicts", swapDataVec.size() - 1);
-					for (auto it = swapDataVec.rbegin() + 1; it != swapDataVec.rend(); ++it) {
+					for (auto it = swapDataVec.begin() + 1; it != swapDataVec.end(); ++it) {
 						auto losingRecord = it->record.substr(it->record.find('|') + 1);
 						REX::WARN("\t\t\t{} ({})", losingRecord, *it->path);
 					}
@@ -127,7 +135,7 @@ namespace AnimObjectSwap
 
 			for (auto& [filters, swapDataVec] : it->second) {
 				if (input.IsValid(*filters)) {
-					for (auto& swapData : swapDataVec | std::ranges::views::reverse) {
+					for (auto& swapData : swapDataVec) {
 						if (const auto swapAnio = swapData.GetSwapAnio(a_actor, a_animObject)) {
 							return swapAnio;
 						}
@@ -150,7 +158,7 @@ namespace AnimObjectSwap
 		}
 
 		if (const auto it = swapAnimObjects.find(a_animObject->GetFormID()); it != swapAnimObjects.end()) {
-			for (auto& swapData : it->second | std::ranges::views::reverse) {
+			for (auto& swapData : it->second) {
 				if (const auto swapAnio = swapData.GetSwapAnio(actor, a_animObject)) {
 					return swapAnio;
 				}

@@ -39,32 +39,17 @@ namespace AnimObjectSwap
 			}
 		};
 
-		constexpr auto base_same_as_swap = [](RE::FormID a_baseID, const FormIDOrSet& a_set) {
-			if (const auto formID = std::get_if<RE::FormID>(&a_set); formID) {
-				return *formID == a_baseID;
-			} else {
-				return false;
-			}
-		};
-
 		const auto formPair = REX::STR::SPLIT(a_str, "|");
 		if (formPair.size() < 2) {
 			REX::ERROR("\t\t\t\tfail : [{}] (invalid entry)", a_str);
 			return;
 		}
 
+		const Chance chance(formPair.size() > 2 ? formPair[2] : std::string{});
+
 		if (const auto baseFormID = util::GetANIOFormID(formPair[0]); baseFormID != 0) {
 			if (const auto swapFormID = util::GetSwapFormID(formPair[1]); !swap_empty(swapFormID)) {
-				/*if (base_same_as_swap(baseFormID, swapFormID)) {
-					REX::ERROR("\t\t\t\tfail : [{}] (BASE formID == SWAP formID)", a_str);
-					return;
-				}*/
-				//breaks Sharpen Other Swords
-
-				const Input input(
-					Chance(formPair.size() > 2 ? formPair[2] : std::string{}),  // chance
-					a_str,
-					a_path);
+				const Input  input(chance, a_str, a_path);
 				SwapAnioData swapAnioData(swapFormID, input);
 
 				a_func(baseFormID, swapAnioData);
@@ -73,30 +58,22 @@ namespace AnimObjectSwap
 			}
 		} else if (const auto baseFormIDs = util::GetANIOFormIDOrderedSet(formPair[0]); !baseFormIDs.empty()) {
 			if (auto swapFormIDs = util::GetANIOFormIDOrderedSet(formPair[1]); !swapFormIDs.empty()) {
-				auto chance = formPair.size() > 2 ? formPair[2] : std::string{};
-
 				// assign each baseFormID the same swapFormID
 				if (swapFormIDs.size() == 1) {
 					const auto swapFormID = *swapFormIDs.begin();
 					for (auto itBaseFormID : baseFormIDs) {
-						/*if (itBaseFormID == swapFormID) {
-							REX::ERROR("\t\t\t\tfail : [{}] (BASE formID == SWAP formID)", a_str);
-							continue;
-						}*/
 						const Input  input(chance, a_str, a_path);
 						SwapAnioData swapAnioData(swapFormID, input);
 
 						a_func(itBaseFormID, swapAnioData);
 					}
-
 					// randomly assign each baseFormID to a unique swapFormID
 				} else if (swapFormIDs.size() >= baseFormIDs.size()) {
-					const auto a_chance = Chance(chance);
-					auto       a_rng = AOS_RNG(a_chance);
+					auto rng = AOS_RNG(chance);
 
 					for (auto itBaseFormID : baseFormIDs) {
 						const auto setEnd = std::distance(swapFormIDs.begin(), swapFormIDs.end()) - 1;
-						const auto randIt = a_rng.generate<std::int64_t>(0, setEnd);
+						const auto randIt = rng.generate<std::int64_t>(0, setEnd);
 						auto       swapFormID = swapFormIDs.extract(*std::next(swapFormIDs.begin(), randIt));
 						if (swapFormID) {
 							const Input  input(chance, a_str, a_path);

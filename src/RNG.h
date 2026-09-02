@@ -11,7 +11,7 @@ struct Chance
 {
 public:
 	Chance() = default;
-	Chance(const std::string& a_str);
+	explicit Chance(const std::string& a_str);
 
 	bool PassedChance(const RE::Actor* a_actor, RE::TESObjectANIO* a_animObject) const;
 
