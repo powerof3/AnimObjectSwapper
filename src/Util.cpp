@@ -2,6 +2,19 @@
 
 namespace util
 {
+	void SanitizePath(std::string& a_string)
+	{
+		a_string = REX::STR::TO_LOWER(a_string);
+
+		static const boost::regex slashPattern(R"(/+|\\+)");
+		static const boost::regex leadingSlashPattern(R"(^\\+)");
+		static const boost::regex meshesPattern(R"(.*?[^\s]meshes\\|^meshes\\)", boost::regex::icase);
+
+		a_string = boost::regex_replace(a_string, slashPattern, R"(\)");
+		a_string = boost::regex_replace(a_string, leadingSlashPattern, "");
+		a_string = boost::regex_replace(a_string, meshesPattern, "");
+	}
+
 	std::pair<RE::FormID, RE::TESForm*> GetFormWithID(const std::string& a_str, bool a_resolveForm)
 	{
 		if (const auto splitID = REX::STR::SPLIT(a_str, "~"); splitID.size() == 2) {

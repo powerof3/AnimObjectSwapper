@@ -7,6 +7,8 @@ namespace regex
 
 namespace util
 {
+	void SanitizePath(std::string& a_string);
+
 	std::pair<RE::FormID, RE::TESForm*> GetFormWithID(const std::string& a_str, bool a_resolveForm);
 	RE::FormID                          GetFormID(const std::string& a_str);
 	RE::FormID                          GetANIOFormID(const std::string& a_str);

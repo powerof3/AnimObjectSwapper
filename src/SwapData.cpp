@@ -4,9 +4,11 @@ namespace AnimObjectSwap
 {
 	std::uint64_t SwapAnioData::Input::GenerateHash() const
 	{
-		std::uint64_t seed;
+		std::uint64_t seed = 0;
 		boost::hash_combine(seed, record);
-		boost::hash_combine(seed, path);
+		if (path) {
+			boost::hash_combine(seed, *path);
+		}
 		return seed;
 	}
 

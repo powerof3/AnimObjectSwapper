@@ -20,7 +20,7 @@ namespace AnimObjectSwap
 	struct FilterRule
 	{
 		FilterRule() = default;
-		FilterRule(bool a_excludeModifier, bool a_partialModifier, const std::string& a_value);
+		FilterRule(bool a_excludeModifier, bool a_partialModifier, const std::string& a_value, bool a_isModelPath);
 
 		std::int32_t GetFilterCost(bool a_allFilter) const;
 
@@ -39,10 +39,10 @@ namespace AnimObjectSwap
 		ConditionFilters(std::vector<std::string>& a_conditions, const std::string& a_traits, std::uint32_t a_fileIndex);
 
 		// members
-		std::vector<FilterGroup> ALL{};          // Guard+*Mage,-Thief+Horse
-		FilterGroup              ANY{};          // Guard,*Mage,-Thief,-*Bandit
+		std::vector<FilterGroup> ALL{};  // Guard+*Mage,-Thief+Horse
+		FilterGroup              ANY{};  // Guard,*Mage,-Thief,-*Bandit
 		Traits                   traits{};
-		std::uint32_t            fileIndex{ 0 }; 
+		std::uint32_t            fileIndex{ 0 };
 	};
 
 	using ConditionFiltersPtr = std::shared_ptr<const ConditionFilters>;
@@ -54,18 +54,10 @@ namespace AnimObjectSwap
 	{
 		explicit ConditionalInput(RE::Actor* a_actor) :
 			actor(a_actor),
+			actorbase(a_actor->GetActorBase()),
 			currentCell(a_actor->GetParentCell()),
 			currentLocation(a_actor->GetCurrentLocation())
-		{
-			if (const auto xLvlBase = actor->extraList.GetByType<RE::ExtraLeveledCreature>(); xLvlBase) {
-				actorbase = skyrim_cast<RE::TESNPC*>(xLvlBase->originalBase);
-			} else {
-				actorbase = a_actor->GetActorBase();
-			}
-		}
-
-		[[nodiscard]] const Set<RE::TESBoundObject*>& GetInventory() const;
-		[[nodiscard]] const std::string&              GetActorBaseEDID() const;
+		{}
 
 		[[nodiscard]] bool IsValid(RE::TESForm* a_form) const;
 		[[nodiscard]] bool IsValid(RE::FormID a_formID) const;
@@ -77,14 +69,33 @@ namespace AnimObjectSwap
 
 		[[nodiscard]] bool IsValid(const ConditionFilters& a_filters) const;
 
+	private:
+		struct ID
+		{
+			ID() = default;
+			explicit ID(const RE::TESForm* a_base);
+			~ID() = default;
+
+			[[nodiscard]] bool contains(const std::string& a_str) const;
+
+			bool operator==(const RE::TESFile* a_mod) const;
+			bool operator==(const std::string& a_str) const;
+			bool operator==(RE::FormID a_formID) const;
+
+			RE::FormID  formID{ 0 };
+			std::string editorID{};
+		};
+
+		[[nodiscard]] const Set<RE::TESBoundObject*>& GetInventory() const;
+		[[nodiscard]] const std::vector<ID>&          GetActorBaseIDs() const;
+
 		// members
 		RE::Actor*         actor;
 		RE::TESNPC*        actorbase;
 		RE::TESObjectCELL* currentCell;
 		RE::BGSLocation*   currentLocation;
 
-	private:
 		mutable std::optional<Set<RE::TESBoundObject*>> inventory{};
-		mutable std::optional<std::string>              actorbaseEDID{};
+		mutable std::vector<ID>                         actorbaseIDs{};
 	};
 }

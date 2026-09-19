@@ -53,7 +53,7 @@ namespace AnimObjectSwap
 					auto splitSection = REX::STR::SPLIT(section, "|");  // [ANIO|conditions|traits]
 					auto conditions = REX::STR::SPLIT(splitSection[1], ",");
 
-					REX::INFO("\treading [{}] : {} conditions", splitSection[0], conditions.size());
+					REX::INFO("\treading [{}] : {} conditions", section, conditions.size());
 
 					auto processedConditions = std::make_shared<const ConditionFilters>(
 						conditions,
