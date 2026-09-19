@@ -15,9 +15,9 @@ namespace AnimObjectSwap
 	SwapAnioData::SwapAnioData(FormIDOrSet a_id, const Input& a_input) :
 		formIDSet(std::move(a_id)),
 		chance(a_input.chance),
+		entryHash(a_input.GenerateHash()),
 		record(a_input.record),
-		path(a_input.path),
-		entryHash(a_input.GenerateHash())
+		path(a_input.path)
 	{}
 
 	RE::TESObjectANIO* SwapAnioData::GetSwapAnio(const RE::Actor* a_actor, const RE::TESObjectANIO* a_animObject) const
@@ -46,9 +46,8 @@ namespace AnimObjectSwap
 		constexpr auto swap_empty = [](const FormIDOrSet& a_set) {
 			if (const auto formID = std::get_if<RE::FormID>(&a_set); formID) {
 				return *formID == 0;
-			} else {
-				return std::get<FormIDSet>(a_set).empty();
 			}
+			return std::get<FormIDSet>(a_set).empty();
 		};
 
 		const auto formPair = REX::STR::SPLIT(a_str, "|");
@@ -72,24 +71,23 @@ namespace AnimObjectSwap
 			if (auto swapFormIDs = util::GetANIOFormIDOrderedSet(formPair[1]); !swapFormIDs.empty()) {
 				// assign each baseFormID the same swapFormID
 				if (swapFormIDs.size() == 1) {
+					const Input input(chance, a_str, a_path);
+
 					const auto swapFormID = *swapFormIDs.begin();
 					for (auto itBaseFormID : baseFormIDs) {
-						const Input  input(chance, a_str, a_path);
 						SwapAnioData swapAnioData(swapFormID, input);
-
 						a_func(itBaseFormID, swapAnioData);
 					}
 					// randomly assign each baseFormID to a unique swapFormID
 				} else if (swapFormIDs.size() >= baseFormIDs.size()) {
-					auto rng = AOS_RNG(chance, a_str);
+					const Input input(chance, a_str, a_path);
 
+					auto rng = AOS_RNG(chance, input.GenerateHash());
 					for (auto itBaseFormID : baseFormIDs) {
 						const auto setEnd = std::distance(swapFormIDs.begin(), swapFormIDs.end()) - 1;
 						const auto randIt = rng.Generate<std::int64_t>(0, setEnd);
 						if (auto swapFormID = swapFormIDs.extract(*std::next(swapFormIDs.begin(), randIt))) {
-							const Input  input(chance, a_str, a_path);
 							SwapAnioData swapAnioData(swapFormID.value(), input);
-
 							a_func(itBaseFormID, swapAnioData);
 						}
 					}

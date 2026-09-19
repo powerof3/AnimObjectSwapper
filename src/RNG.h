@@ -4,6 +4,7 @@
 
 enum class CHANCE_TYPE
 {
+	kNone,
 	kRandom,
 	kActorHash,
 	kLocationHash
@@ -20,8 +21,7 @@ struct RNGBase
 struct AOS_RNG : RNGBase
 {
 	AOS_RNG(const RNGBase& a_base);
-	AOS_RNG(const RNGBase& a_base, const std::string& a_entry);
-	AOS_RNG(const RNGBase& a_base, const RE::Actor* a_actor, const RE::TESObjectANIO* a_animObject, std::uint64_t a_entryHash);
+	AOS_RNG(const RNGBase& a_base, std::uint64_t a_entryHash);
 
 	void Seed(const RE::Actor* a_actor, const RE::TESObjectANIO* a_animObject, std::uint64_t a_entryHash);
 

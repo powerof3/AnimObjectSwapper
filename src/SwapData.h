@@ -12,7 +12,7 @@ namespace AnimObjectSwap
 	public:
 		struct Input
 		{
-			std::uint64_t GenerateHash() const;
+			[[nodiscard]] std::uint64_t GenerateHash() const;
 
 			RNGParams   chance;
 			std::string record;

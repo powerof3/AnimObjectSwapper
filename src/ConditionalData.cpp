@@ -65,8 +65,8 @@ namespace AnimObjectSwap
 	{
 		const auto hasExcludeModifier = a_entry[0] == '-';
 
-		if (hasExcludeModifier || a_entry[0] == '+') { // -*Guard
-			a_entry.erase(0, 1);  // *Guard
+		if (hasExcludeModifier || a_entry[0] == '+') {  // -*Guard
+			a_entry.erase(0, 1);                        // *Guard
 		}
 
 		const auto hasPartialModifier = !a_entry.empty() && a_entry[0] == '*';
@@ -295,7 +295,7 @@ namespace AnimObjectSwap
 					   [&](RE::TESForm* a_form) {
 						   result = IsValid(a_form);
 					   },
-					   [&](RE::FormID a_formID) {
+					   [&](const RE::FormID a_formID) {
 						   result = IsValid(a_formID);
 					   },
 					   [&](const std::string& a_string) {

@@ -21,8 +21,8 @@ namespace AnimObjectSwap
 	{
 		FilterRule() = default;
 
-		static FilterRule FromEntry(std::string a_entry);
-		std::int32_t      GetFilterCost(bool a_allFilter) const;
+		static FilterRule          FromEntry(std::string a_entry);
+		[[nodiscard]] std::int32_t GetFilterCost(bool a_allFilter) const;
 
 		// members
 		bool          excludeModifier{ false };  // -

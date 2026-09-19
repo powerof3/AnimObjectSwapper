@@ -1,35 +1,15 @@
 #include "RNG.h"
 
-std::uint64_t AOS_RNG::get_form_seed(const RE::TESForm* a_form)
-{
-	if (a_form->IsDynamicForm()) {
-		return a_form->GetFormID();
-	}
-
-	std::uint64_t result = 0;
-	boost::hash_combine(result, a_form->GetLocalFormID());
-
-	auto fileName = a_form->GetFile(0)->GetFilename();
-	if (a_form->AsReference() && (a_form->GetFormID() & 0xFF000000) == 0) {
-		fileName = "Skyrim.esm"sv;
-	}
-	boost::hash_combine(result, fileName);
-
-	return result;
-}
-
-AOS_RNG::AOS_RNG(const RNGBase& a_base):
+AOS_RNG::AOS_RNG(const RNGBase& a_base) :
 	RNGBase(a_base)
 {}
 
-AOS_RNG::AOS_RNG(const RNGBase& a_base, const std::string& a_entry) :
-	AOS_RNG(a_base, nullptr, nullptr, REX::STR::CONST_HASH(a_entry))
-{}
-
-AOS_RNG::AOS_RNG(const RNGBase& a_base, const RE::Actor* a_actor, const RE::TESObjectANIO* a_animObject, std::uint64_t a_entryHash) :
+AOS_RNG::AOS_RNG(const RNGBase& a_base, std::uint64_t a_entryHash) :
 	RNGBase(a_base)
 {
-	Seed(a_actor, a_animObject, a_entryHash);
+	std::uint64_t mixSeed = seed;
+	boost::hash_combine(mixSeed, a_entryHash);
+	rng.emplace(XoshiroCpp::Xoshiro256StarStar(mixSeed));
 }
 
 void AOS_RNG::Seed(const RE::Actor* a_actor, const RE::TESObjectANIO* a_animObject, std::uint64_t a_entryHash)
@@ -37,15 +17,15 @@ void AOS_RNG::Seed(const RE::Actor* a_actor, const RE::TESObjectANIO* a_animObje
 	if (rng) {
 		return;
 	}
-	
+
 	const auto make_seed = [&](std::uint64_t a_seed) {
-		std::uint64_t result = a_seed;
+		std::uint64_t mixSeed = a_seed;
 		if (a_animObject) {
-			boost::hash_combine(result, get_form_seed(a_animObject));
+			boost::hash_combine(mixSeed, get_form_seed(a_animObject));
 		}
-		boost::hash_combine(result, a_entryHash);
-		boost::hash_combine(result, seed);
-		return result;
+		boost::hash_combine(mixSeed, a_entryHash);
+		boost::hash_combine(mixSeed, seed);
+		return mixSeed;
 	};
 
 	switch (type) {
@@ -90,18 +70,37 @@ void AOS_RNG::Seed(const RE::Actor* a_actor, const RE::TESObjectANIO* a_animObje
 	}
 }
 
+std::uint64_t AOS_RNG::get_form_seed(const RE::TESForm* a_form)
+{
+	if (a_form->IsDynamicForm()) {
+		return a_form->GetFormID();
+	}
+
+	std::uint64_t result = 0;
+	boost::hash_combine(result, a_form->GetLocalFormID());
+
+	auto fileName = a_form->GetFile(0)->GetFilename();
+	if (a_form->AsReference() && (a_form->GetFormID() & 0xFF000000) == 0) {
+		fileName = "Skyrim.esm"sv;
+	}
+	boost::hash_combine(result, fileName);
+
+	return result;
+}
+
 RNGParams::RNGParams(const std::string& a_str)
 {
 	if (distribution::is_valid_entry(a_str)) {
-		if (a_str.contains("chance")) {
-			if (a_str.contains("chanceR")) {
-				type = CHANCE_TYPE::kRandom;
-			} else if (a_str.contains("chanceL")) {
-				type = CHANCE_TYPE::kLocationHash;
-			} else {
-				type = CHANCE_TYPE::kActorHash;
-			}
-
+		if (a_str.contains("chanceR")) {
+			type = CHANCE_TYPE::kRandom;
+		} else if (a_str.contains("chanceL")) {
+			type = CHANCE_TYPE::kLocationHash;
+		} else if (a_str.contains("chance")) {
+			type = CHANCE_TYPE::kActorHash;
+		} else {
+			type = CHANCE_TYPE::kNone;
+		}
+		if (type != CHANCE_TYPE::kNone) {
 			if (boost::cmatch match; boost::regex_search(a_str.c_str(), match, regex::generic)) {
 				if (const auto chanceOptions = REX::STR::SPLIT(match[1].str(), ","); !chanceOptions.empty()) {
 					chanceValue = REX::STR::TO_NUM<float>(chanceOptions[0]);

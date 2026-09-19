@@ -57,7 +57,7 @@ namespace AnimObjectSwap
 
 					auto processedConditions = std::make_shared<const ConditionFilters>(
 						conditions,
-						splitSection.size() > 2 ? splitSection[2] : std::string{}, // traits
+						splitSection.size() > 2 ? splitSection[2] : std::string{},  // traits
 						fileIndex);
 
 					REX::INFO("\t\t\t{} anim object swaps found", values.size());
@@ -95,7 +95,22 @@ namespace AnimObjectSwap
 		REX::INFO("{:*^30}", "RESULT");
 
 		REX::INFO("{} anim object swaps", swapAnimObjects.size());
+		for (auto& [baseID, swapDataVec] : swapAnimObjects) {
+			auto base = RE::TESForm::LookupByID<RE::TESObjectANIO>(baseID);
+			REX::INFO("\t{} [{:X}] : {} swaps", base->GetFormEditorID(), base->GetFormID(), swapDataVec.size());
+		}
+
 		REX::INFO("{} conditional anim object swaps", swapAnimObjectsConditional.size());
+		for (auto& [baseID, swapDataMap] : swapAnimObjectsConditional) {
+			auto base = RE::TESForm::LookupByID<RE::TESObjectANIO>(baseID);
+			
+			std::size_t size = 0;
+			for (const auto& swapDataVec : swapDataMap | std::views::values) {
+				size += swapDataVec.size();
+			}
+
+			REX::INFO("\t{} [{:X}] : {} swaps", base->GetFormEditorID(), base->GetFormID(), size);
+		}
 
 		REX::INFO("{:*^30}", "CONFLICTS");
 
