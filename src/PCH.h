@@ -45,10 +45,10 @@ using Set = boost::unordered_flat_set<K, H, KEqual>;
 
 template <class T>
 using OrderedSet = std::set<T>;
+using FormIDOrderedSet = OrderedSet<RE::FormID>;
 
 using FormIDSet = std::vector<RE::FormID>;
 using FormIDOrSet = std::variant<RE::FormID, FormIDSet>;
-using FormIDOrderedSet = OrderedSet<RE::FormID>;
 
 template <class T>
 using FormIDMap = Map<RE::FormID, T>;

@@ -92,4 +92,17 @@ namespace util
 		}
 		return set;
 	}
+
+	RE::TESForm* GetLocationOrCell(const RE::Actor* a_actor)
+	{
+		RE::TESForm* locOrCell = nullptr;
+		if (a_actor) {
+			if (const auto location = a_actor->GetCurrentLocation()) {
+				locOrCell = location;
+			} else {
+				locOrCell = a_actor->GetParentCell();
+			}
+		}
+		return locOrCell;
+	}
 }

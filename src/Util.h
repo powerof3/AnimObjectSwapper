@@ -15,4 +15,6 @@ namespace util
 
 	FormIDOrSet      GetSwapFormID(const std::string& a_str);
 	FormIDOrderedSet GetANIOFormIDOrderedSet(const std::string& a_str);
+
+	RE::TESForm* GetLocationOrCell(const RE::Actor* a_actor);
 }

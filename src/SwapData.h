@@ -13,8 +13,8 @@ namespace AnimObjectSwap
 		struct Input
 		{
 			std::uint64_t GenerateHash() const;
-			
-			Chance      chance;
+
+			RNGParams   chance;
 			std::string record;
 			ConfigPath  path;
 		};
@@ -27,7 +27,7 @@ namespace AnimObjectSwap
 
 		// members
 		FormIDOrSet   formIDSet{};
-		Chance        chance{};
+		RNGParams     chance{};
 		std::uint64_t entryHash{ 0 };
 		std::uint32_t fileIndex{ 0 };
 
