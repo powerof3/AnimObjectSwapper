@@ -20,15 +20,18 @@ namespace AnimObjectSwap
 	struct FilterRule
 	{
 		FilterRule() = default;
-		FilterRule(bool a_excludeModifier, bool a_partialModifier, const std::string& a_value, bool a_isModelPath);
 
-		std::int32_t GetFilterCost(bool a_allFilter) const;
+		static FilterRule FromEntry(std::string a_entry);
+		std::int32_t      GetFilterCost(bool a_allFilter) const;
 
 		// members
 		bool          excludeModifier{ false };  // -
 		bool          partialModifier{ false };  // *
 		bool          isModelPath{ false };
 		ConditionData data{};
+
+	private:
+		FilterRule(bool a_excludeModifier, bool a_partialModifier, const std::string& a_value, bool a_isModelPath);
 	};
 
 	using FilterGroup = std::vector<FilterRule>;  // Guard+*Mage+-Thief+-*Bandit
@@ -70,24 +73,24 @@ namespace AnimObjectSwap
 		[[nodiscard]] bool IsValid(const ConditionFilters& a_filters) const;
 
 	private:
-		struct ID
+		struct NPC
 		{
-			ID() = default;
-			explicit ID(const RE::TESForm* a_base);
-			~ID() = default;
+			NPC() = default;
+			explicit NPC(RE::TESNPC* a_base) :
+				npc(a_base)
+			{}
 
-			[[nodiscard]] bool contains(const std::string& a_str) const;
+			const std::string& get_editorID() const;
+			bool               contains(const std::string& a_str) const { return REX::STR::ICONTAINS(get_editorID(), a_str); }
+			bool               operator==(const std::string& a_str) const { return REX::STR::IEQUALS(get_editorID(), a_str); }
+			bool               operator==(const RE::TESForm* a_form) const { return npc == a_form; }
 
-			bool operator==(const RE::TESFile* a_mod) const;
-			bool operator==(const std::string& a_str) const;
-			bool operator==(RE::FormID a_formID) const;
-
-			RE::FormID  formID{ 0 };
-			std::string editorID{};
+			RE::TESNPC*                        npc{};
+			mutable std::optional<std::string> editorID{};
 		};
 
 		[[nodiscard]] const Set<RE::TESBoundObject*>& GetInventory() const;
-		[[nodiscard]] const std::vector<ID>&          GetActorBaseIDs() const;
+		[[nodiscard]] const std::vector<NPC>&         GetActorBases() const;
 
 		// members
 		RE::Actor*         actor;
@@ -96,6 +99,6 @@ namespace AnimObjectSwap
 		RE::BGSLocation*   currentLocation;
 
 		mutable std::optional<Set<RE::TESBoundObject*>> inventory{};
-		mutable std::vector<ID>                         actorbaseIDs{};
+		mutable std::vector<NPC>                        actorbases{};
 	};
 }

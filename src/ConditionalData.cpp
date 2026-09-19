@@ -61,12 +61,33 @@ namespace AnimObjectSwap
 		return cost;
 	}
 
+	FilterRule FilterRule::FromEntry(std::string a_entry)
+	{
+		const auto hasExcludeModifier = a_entry[0] == '-';
+
+		if (hasExcludeModifier || a_entry[0] == '+') { // -*Guard
+			a_entry.erase(0, 1);  // *Guard
+		}
+
+		const auto hasPartialModifier = !a_entry.empty() && a_entry[0] == '*';
+		if (hasPartialModifier) {
+			a_entry.erase(0, 1);  // Guard
+		}
+
+		const auto isModelPath = REX::STR::ICONTAINS(a_entry, ".nif") || a_entry.contains('\\') || a_entry.contains('/');
+		if (isModelPath) {
+			util::SanitizePath(a_entry);
+		}
+
+		return FilterRule(hasExcludeModifier, hasPartialModifier, a_entry, isModelPath);
+	}
+
 	FilterRule::FilterRule(const bool a_excludeModifier, const bool a_partialModifier, const std::string& a_value, bool a_isModelPath) :
 		excludeModifier(a_excludeModifier),
 		partialModifier(a_partialModifier),
 		isModelPath(a_isModelPath)
 	{
-		if (a_partialModifier) {
+		if (a_partialModifier || a_isModelPath) {
 			data = a_value;
 			return;
 		}
@@ -77,9 +98,7 @@ namespace AnimObjectSwap
 				data = processedID;
 			}
 		} else {
-			if (!isModelPath) {
-				REX::ERROR("\t\tFilter [{}] INFO - unable to find form, treating filter as string", a_value);
-			}
+			REX::ERROR("\t\tFilter [{}] INFO - unable to find form, treating filter as string", a_value);
 			data = a_value;
 		}
 	}
@@ -87,20 +106,6 @@ namespace AnimObjectSwap
 	ConditionFilters::ConditionFilters(std::vector<std::string>& a_conditions, const std::string& a_traits, std::uint32_t a_fileIndex) :
 		fileIndex(a_fileIndex)
 	{
-		constexpr auto get_filter = [](std::string& entry) {
-			auto  topLevelModifier = (entry[0] == '+' || entry[0] == '-') ? entry[0] : '+';  // -*Guard
-			auto& filterEntry = (topLevelModifier == entry[0]) ? entry.erase(0, 1) : entry;  // *Guard
-			bool  partialModifier = !filterEntry.empty() && filterEntry[0] == '*';
-			if (partialModifier) {
-				filterEntry.erase(0, 1);  // Guard
-			}
-			bool isModelPath = REX::STR::ICONTAINS(filterEntry, ".nif") || filterEntry.contains('\\');
-			if (isModelPath) {
-				util::SanitizePath(filterEntry);
-			}
-			return FilterRule(topLevelModifier == '-', partialModifier, filterEntry, isModelPath);
-		};
-
 		for (auto& condition : a_conditions) {
 			REX::STR::TRIM(condition);
 			if (!distribution::is_valid_entry(condition)) {
@@ -114,14 +119,14 @@ namespace AnimObjectSwap
 					if (ALLEntry.empty()) {
 						continue;
 					}
-					group.emplace_back(get_filter(ALLEntry));
+					group.emplace_back(FilterRule::FromEntry(ALLEntry));
 				}
 				if (!group.empty()) {
 					ALL.emplace_back(std::move(group));
 				}
 			} else {
 				// A or *B or -C or -*D
-				ANY.emplace_back(get_filter(condition));
+				ANY.emplace_back(FilterRule::FromEntry(condition));
 			}
 		}
 
@@ -135,36 +140,23 @@ namespace AnimObjectSwap
 		}
 	}
 
-	ConditionalInput::ID::ID(const RE::TESForm* a_base) :
-		formID(a_base->GetFormID()),
-		editorID(editorID::get_editorID(a_base))
-	{}
-
-	bool ConditionalInput::ID::contains(const std::string& a_str) const
+	const std::string& ConditionalInput::NPC::get_editorID() const
 	{
-		return REX::STR::ICONTAINS(editorID, a_str);
-	}
-
-	bool ConditionalInput::ID::operator==(const RE::TESFile* a_mod) const
-	{
-		return a_mod->IsFormInMod(formID);
-	}
-
-	bool ConditionalInput::ID::operator==(const std::string & a_str) const
-	{
-		return REX::STR::IEQUALS(editorID, a_str);
-	}
-
-	bool ConditionalInput::ID::operator==(RE::FormID a_formID) const
-	{
-		return formID == a_formID;
+		if (!editorID) {
+			if (npc) {
+				editorID.emplace(editorID::get_editorID(npc));
+			} else {
+				editorID.emplace("");
+			}
+		}
+		return *editorID;
 	}
 
 	const Set<RE::TESBoundObject*>& ConditionalInput::GetInventory() const
 	{
 		if (!inventory) {
 			Set<RE::TESBoundObject*> tempSet;
-			const auto actorInventory = actor->GetInventory([](RE::TESBoundObject& a_object) {
+			const auto               actorInventory = actor->GetInventory([](RE::TESBoundObject& a_object) {
 				return a_object.IsInventoryObject();
 			},
 				true);
@@ -183,24 +175,24 @@ namespace AnimObjectSwap
 		return *inventory;
 	}
 
-	const std::vector<ConditionalInput::ID>& ConditionalInput::GetActorBaseIDs() const
+	const std::vector<ConditionalInput::NPC>& ConditionalInput::GetActorBases() const
 	{
-		if (actorbaseIDs.empty()) {
+		if (actorbases.empty() && actorbase) {
 			if (actorbase->baseTemplateForm) {
-				actorbaseIDs.emplace_back(actorbase->baseTemplateForm);
+				actorbases.emplace_back(skyrim_cast<RE::TESNPC*>(actorbase->baseTemplateForm));
 			}
 			if (const auto extraLvlCreature = actor->extraList.GetByType<RE::ExtraLeveledCreature>()) {
 				if (const auto originalBase = extraLvlCreature->originalBase) {
-					actorbaseIDs.emplace_back(originalBase);
+					actorbases.emplace_back(skyrim_cast<RE::TESNPC*>(originalBase));
 				}
 				if (const auto templateBase = extraLvlCreature->templateBase) {
-					actorbaseIDs.emplace_back(templateBase);
+					actorbases.emplace_back(skyrim_cast<RE::TESNPC*>(templateBase));
 				}
 			} else {
-				actorbaseIDs.emplace_back(actorbase);
+				actorbases.emplace_back(actorbase);
 			}
 		}
-		return actorbaseIDs;
+		return actorbases;
 	}
 
 	bool ConditionalInput::IsValid(RE::TESForm* a_form) const
@@ -208,7 +200,7 @@ namespace AnimObjectSwap
 		if (a_form) {
 			switch (a_form->GetFormType()) {
 			case RE::FormType::NPC:
-				return actorbase == a_form || std::ranges::any_of(GetActorBaseIDs(), [&](const auto& ID) { return ID == a_form->GetFormID(); });
+				return actorbase == a_form || std::ranges::any_of(GetActorBases(), [&](const auto& ID) { return ID == a_form; });
 			case RE::FormType::Faction:
 				{
 					const auto faction = a_form->As<RE::TESFaction>();
@@ -270,7 +262,7 @@ namespace AnimObjectSwap
 	}
 
 	bool ConditionalInput::IsValid(const RE::FormID a_formID) const
-	{ 
+	{
 		return IsValid(RE::TESForm::LookupByID(a_formID));
 	}
 
@@ -323,7 +315,7 @@ namespace AnimObjectSwap
 			});
 		}
 		if (actorbase) {
-			if (actorbase->ContainsKeyword(a_string) || std::ranges::any_of(GetActorBaseIDs(), [&](const auto& ID) { return ID.contains(a_string); })) {
+			if (actorbase->ContainsKeyword(a_string) || std::ranges::any_of(GetActorBases(), [&](const auto& npc) { return npc.contains(a_string); })) {
 				return true;
 			}
 		}
