@@ -12,6 +12,8 @@ namespace AnimObjectSwap
 	public:
 		struct Input
 		{
+			std::uint64_t GenerateHash() const;
+			
 			Chance      chance;
 			std::string record;
 			ConfigPath  path;
@@ -20,12 +22,13 @@ namespace AnimObjectSwap
 		SwapAnioData() = delete;
 		SwapAnioData(FormIDOrSet a_id, const Input& a_input);
 
-		RE::TESObjectANIO* GetSwapAnio(const RE::Actor* a_actor, RE::TESObjectANIO* a_animObject) const;
+		RE::TESObjectANIO* GetSwapAnio(const RE::Actor* a_actor, const RE::TESObjectANIO* a_animObject) const;
 		static void        GetForms(const ConfigPath& a_path, const std::string& a_str, std::function<void(RE::FormID, SwapAnioData&)> a_func);
 
 		// members
 		FormIDOrSet   formIDSet{};
 		Chance        chance{};
+		std::uint64_t entryHash{ 0 };
 		std::uint32_t fileIndex{ 0 };
 
 		// used for logging conflicts

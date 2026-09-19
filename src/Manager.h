@@ -12,7 +12,7 @@ namespace AnimObjectSwap
 		RE::TESObjectANIO* GetSwappedAnimObject(RE::TESObjectREFR* a_user, RE::TESObjectANIO* a_animObject);
 
 	private:
-		RE::TESObjectANIO* GetSwappedAnimObjectConditional(RE::Actor* a_actor, RE::TESObjectANIO* a_animObject) const;
+		RE::TESObjectANIO* GetSwappedAnimObjectConditional(RE::Actor* a_actor, const RE::TESObjectANIO* a_animObject) const;
 
 		// members
 		FormIDMap<SwapAnioDataVec>         swapAnimObjects{};

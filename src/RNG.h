@@ -9,11 +9,10 @@ enum class CHANCE_TYPE
 
 struct Chance
 {
-public:
 	Chance() = default;
 	explicit Chance(const std::string& a_str);
 
-	bool PassedChance(const RE::Actor* a_actor, RE::TESObjectANIO* a_animObject) const;
+	bool PassedChance(const RE::Actor* a_actor, const RE::TESObjectANIO* a_animObject, uint64_t a_entryHash) const;
 
 	// members
 	CHANCE_TYPE   chanceType{ CHANCE_TYPE::kRandom };
@@ -23,9 +22,8 @@ public:
 
 struct AOS_RNG
 {
-public:
 	AOS_RNG() = default;
-	AOS_RNG(const Chance& a_chance, const RE::Actor* a_actor, RE::TESObjectANIO* a_animObject);
+	AOS_RNG(const Chance& a_chance, const RE::Actor* a_actor, const RE::TESObjectANIO* a_animObject, std::uint64_t a_entryHash);
 	explicit AOS_RNG(const Chance& a_chance);
 
 	template <class T>

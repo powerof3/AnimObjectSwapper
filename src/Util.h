@@ -2,7 +2,7 @@
 
 namespace regex
 {
-	inline static boost::regex generic{ R"(\((.*?)\))" };  // chanceR(50,12345) -> "50,12345"
+	inline boost::regex generic{ R"(\((.*?)\))" };  // chanceR(50,12345) -> "50,12345"
 }
 
 namespace util

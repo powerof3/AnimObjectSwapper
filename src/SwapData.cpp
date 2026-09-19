@@ -2,18 +2,27 @@
 
 namespace AnimObjectSwap
 {
+	std::uint64_t SwapAnioData::Input::GenerateHash() const
+	{
+		std::uint64_t seed;
+		boost::hash_combine(seed, record);
+		boost::hash_combine(seed, path);
+		return seed;
+	}
+
 	SwapAnioData::SwapAnioData(FormIDOrSet a_id, const Input& a_input) :
 		formIDSet(std::move(a_id)),
 		chance(a_input.chance),
 		record(a_input.record),
-		path(a_input.path)
+		path(a_input.path),
+		entryHash(a_input.GenerateHash())
 	{}
 
-	RE::TESObjectANIO* SwapAnioData::GetSwapAnio(const RE::Actor* a_actor, RE::TESObjectANIO* a_animObject) const
+	RE::TESObjectANIO* SwapAnioData::GetSwapAnio(const RE::Actor* a_actor, const RE::TESObjectANIO* a_animObject) const
 	{
 		RE::TESObjectANIO* anio = nullptr;
 
-		if (!chance.PassedChance(a_actor, a_animObject)) {
+		if (!chance.PassedChance(a_actor, a_animObject, entryHash)) {
 			return anio;
 		}
 
@@ -21,7 +30,7 @@ namespace AnimObjectSwap
 			anio = RE::TESForm::LookupByID<RE::TESObjectANIO>(*formID);
 		} else {
 			if (auto& set = std::get<FormIDSet>(formIDSet); !set.empty()) {  // return random element from set
-				const auto randIt = AOS_RNG(chance, a_actor, a_animObject).generate<std::size_t>(0, set.size() - 1);
+				const auto randIt = AOS_RNG(chance, a_actor, a_animObject, entryHash).generate<std::size_t>(0, set.size() - 1);
 				anio = RE::TESForm::LookupByID<RE::TESObjectANIO>(set[randIt]);
 			}
 		}
@@ -74,8 +83,7 @@ namespace AnimObjectSwap
 					for (auto itBaseFormID : baseFormIDs) {
 						const auto setEnd = std::distance(swapFormIDs.begin(), swapFormIDs.end()) - 1;
 						const auto randIt = rng.generate<std::int64_t>(0, setEnd);
-						auto       swapFormID = swapFormIDs.extract(*std::next(swapFormIDs.begin(), randIt));
-						if (swapFormID) {
+						if (auto swapFormID = swapFormIDs.extract(*std::next(swapFormIDs.begin(), randIt))) {
 							const Input  input(chance, a_str, a_path);
 							SwapAnioData swapAnioData(swapFormID.value(), input);
 

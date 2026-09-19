@@ -144,7 +144,7 @@ namespace AnimObjectSwap
 				true);
 			tempSet.reserve(actorInventory.size());
 			for (const auto& [object, data] : actorInventory) {
-				if (data.first < 0) {
+				if (data.first <= 0) {
 					continue;
 				}
 				tempSet.emplace(object);

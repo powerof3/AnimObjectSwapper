@@ -35,7 +35,6 @@ namespace AnimObjectSwap
 
 	struct ConditionFilters
 	{
-	public:
 		ConditionFilters() = default;
 		ConditionFilters(std::vector<std::string>& a_conditions, const std::string& a_traits, std::uint32_t a_fileIndex);
 
@@ -55,10 +54,15 @@ namespace AnimObjectSwap
 	{
 		explicit ConditionalInput(RE::Actor* a_actor) :
 			actor(a_actor),
-			actorbase(a_actor->GetActorBase()),
 			currentCell(a_actor->GetParentCell()),
 			currentLocation(a_actor->GetCurrentLocation())
-		{}
+		{
+			if (const auto xLvlBase = actor->extraList.GetByType<RE::ExtraLeveledCreature>(); xLvlBase) {
+				actorbase = skyrim_cast<RE::TESNPC*>(xLvlBase->originalBase);
+			} else {
+				actorbase = a_actor->GetActorBase();
+			}
+		}
 
 		[[nodiscard]] const Set<RE::TESBoundObject*>& GetInventory() const;
 		[[nodiscard]] const std::string&              GetActorBaseEDID() const;

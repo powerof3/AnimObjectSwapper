@@ -101,7 +101,7 @@ namespace AnimObjectSwap
 
 		bool hasConflicts = false;
 		if (!swapAnimObjects.empty()) {
-			for (auto& [baseID, swapDataVec] : swapAnimObjects) {
+			for (auto& swapDataVec : swapAnimObjects | std::views::values) {
 				if (swapDataVec.size() > 1) {
 					const auto& winningRecord = swapDataVec.front();
 					if (winningRecord.chance.chanceValue != 100) {  // ignore if winning record is randomized
@@ -128,7 +128,7 @@ namespace AnimObjectSwap
 		REX::INFO("{:*^30}", "END");
 	}
 
-	RE::TESObjectANIO* Manager::GetSwappedAnimObjectConditional(RE::Actor* a_actor, RE::TESObjectANIO* a_animObject) const
+	RE::TESObjectANIO* Manager::GetSwappedAnimObjectConditional(RE::Actor* a_actor, const RE::TESObjectANIO* a_animObject) const
 	{
 		if (const auto it = swapAnimObjectsConditional.find(a_animObject->GetFormID()); it != swapAnimObjectsConditional.end()) {
 			ConditionalInput input(a_actor);

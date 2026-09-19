@@ -18,17 +18,27 @@ std::uint64_t AOS_RNG::get_form_seed(const RE::TESForm* a_form)
 	return result;
 }
 
-AOS_RNG::AOS_RNG(const Chance& a_chance, const RE::Actor* a_actor, RE::TESObjectANIO* a_animObject) :
+AOS_RNG::AOS_RNG(const Chance& a_chance, const RE::Actor* a_actor, const RE::TESObjectANIO* a_animObject, std::uint64_t a_entryHash) :
 	type(a_chance.chanceType)
 {
+	const auto make_seed = [&](std::uint64_t a_seed) {
+		std::uint64_t result = a_seed;
+		if (a_animObject) {
+			boost::hash_combine(result, get_form_seed(a_animObject));
+		}
+		boost::hash_combine(result, a_entryHash);
+		boost::hash_combine(result, a_chance.seed);
+		return result;
+	};
+
 	switch (type) {
 	case CHANCE_TYPE::kActorHash:
 		{
 			if (a_actor) {
-				seed = get_form_seed(a_actor);
+				seed = make_seed(get_form_seed(a_actor));
 			} else {
 				type = CHANCE_TYPE::kRandom;
-				seed = a_chance.seed;
+				seed = a_chance.seed != 0 ? make_seed(0) : 0;
 			}
 		}
 		break;
@@ -43,20 +53,23 @@ AOS_RNG::AOS_RNG(const Chance& a_chance, const RE::Actor* a_actor, RE::TESObject
 				}
 			}
 			if (locOrCell && a_animObject) {
-				std::uint64_t result = 0;
-				boost::hash_combine(result, get_form_seed(locOrCell));
-				boost::hash_combine(result, get_form_seed(a_animObject));
-				seed = result;
+				seed = make_seed(get_form_seed(locOrCell));
 			} else if (a_actor) {
-				seed = get_form_seed(a_actor);
+				seed = make_seed(get_form_seed(a_actor));
 			} else {
 				type = CHANCE_TYPE::kRandom;
-				seed = a_chance.seed;
+				seed = a_chance.seed != 0 ? make_seed(0) : 0;
 			}
 		}
 		break;
 	case CHANCE_TYPE::kRandom:
-		seed = a_chance.seed;
+		{
+			if (a_chance.seed != 0) {
+				seed = make_seed(a_actor ? get_form_seed(a_actor) : 0);
+			} else {
+				seed = 0;
+			}
+		}
 		break;
 	default:
 		break;
@@ -81,18 +94,19 @@ Chance::Chance(const std::string& a_str)
 			}
 
 			if (boost::cmatch match; boost::regex_search(a_str.c_str(), match, regex::generic)) {
-				const auto chanceOptions = REX::STR::SPLIT(match[1].str(), ",");
-				chanceValue = REX::STR::TO_NUM<float>(chanceOptions[0]);
-				seed = chanceOptions.size() > 1 ? REX::STR::TO_NUM<std::uint64_t>(chanceOptions[1]) : 0;
+				if (const auto chanceOptions = REX::STR::SPLIT(match[1].str(), ","); !chanceOptions.empty()) {
+					chanceValue = REX::STR::TO_NUM<float>(chanceOptions[0]);
+					seed = chanceOptions.size() > 1 ? REX::STR::TO_NUM<std::uint64_t>(chanceOptions[1]) : 0;
+				}
 			}
 		}
 	}
 }
 
-bool Chance::PassedChance(const RE::Actor* a_actor, RE::TESObjectANIO* a_animObject) const
+bool Chance::PassedChance(const RE::Actor* a_actor, const RE::TESObjectANIO* a_animObject, std::uint64_t a_entryHash) const
 {
 	if (chanceValue < 100.0f) {
-		const AOS_RNG rng(*this, a_actor, a_animObject);
+		const AOS_RNG rng(*this, a_actor, a_animObject, a_entryHash);
 		if (const auto rngValue = rng.generate<float>(0.0f, 100.0f); rngValue > chanceValue) {
 			return false;
 		}
