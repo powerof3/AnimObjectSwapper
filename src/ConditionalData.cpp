@@ -77,7 +77,9 @@ namespace AnimObjectSwap
 				data = processedID;
 			}
 		} else {
-			REX::ERROR("\t\tFilter [{}] INFO - unable to find form, treating filter as string", a_value);
+			if (!isModelPath) {
+				REX::ERROR("\t\tFilter [{}] INFO - unable to find form, treating filter as string", a_value);
+			}
 			data = a_value;
 		}
 	}
